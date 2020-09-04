@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 
-use hyper::{Body, Client, Method, Request, Response, Server};
+use hyper::{Body, Response};
 
 use lru::LruCache;
 
@@ -10,11 +10,8 @@ use os_info::{Info, Type};
 
 use tokio::sync::Mutex;
 
-use trust_dns_resolver::{Resolver, AsyncResolver};
 use trust_dns_resolver::TokioAsyncResolver;
-use trust_dns_resolver::config::*;
-use trust_dns_resolver::lookup_ip::LookupIp;
-use trust_dns_resolver::name_server::GenericConnection;
+use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 
 pub async fn create_resolver (dns1_sock : SocketAddr, dns2_sock : SocketAddr) -> TokioAsyncResolver {
     let mut resolver_config : ResolverConfig = ResolverConfig::new();
@@ -89,7 +86,7 @@ pub fn ip_gateway() -> String {
 
 pub async fn resolve_with_cache(host : &str,
                                 resolver : &TokioAsyncResolver,
-                                mut resolver_cache: Arc<Mutex<LruCache<String, String>>>) -> String {
+                                resolver_cache: Arc<Mutex<LruCache<String, String>>>) -> String {
 
     let host_string = String::from(host);
     let mut guard = resolver_cache.lock().await;
