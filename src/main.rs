@@ -1,11 +1,10 @@
-//#![deny(warnings)]
+#![deny(warnings)]
 
 extern crate lru;
 
 use std::convert::Infallible;
-use std::net::{IpAddr, SocketAddr};
+use std::net::SocketAddr;
 use std::sync::Arc;
-use std::iter;
 
 use clap::{Arg, ArgMatches, App};
 
@@ -14,11 +13,12 @@ use futures_util::future::try_join;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::upgrade::Upgraded;
 use hyper::{Body, Client, Method, Request, Response, Server};
-use hyper::client::Builder;
 use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
 
 use lru::LruCache;
+
+use pnet::datalink;
 
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
@@ -27,7 +27,7 @@ use trust_dns_resolver::TokioAsyncResolver;
 
 use bubble_flexrouter::*;
 
-type HttpClient = Client<hyper::client::HttpConnector>;
+type HttpClient = Client<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>;
 
 // To try this example:
 // 1. cargo run --example http_proxy
@@ -58,29 +58,34 @@ async fn main() {
             .takes_value(true))
         .get_matches();
 
+    let mut bind_addr = None;
+    for iface in datalink::interfaces() {
+        if iface.is_loopback() { continue; }
+        if !iface.is_up() { continue; }
+        for ip in iface.ips {
+            if ip.ip().is_ipv6() { continue; }
+            bind_addr = Some(ip);
+            break;
+        }
+    }
+    if bind_addr.is_none() {
+        panic!("No eligible IP interface found for binding");
+    }
+
     let dns1_ip = args.value_of("dns1").unwrap();
     let dns1_sock : SocketAddr = format!("{}:53", dns1_ip).parse().unwrap();
     let dns2_ip = args.value_of("dns2").unwrap();
     let dns2_sock : SocketAddr = format!("{}:53", dns2_ip).parse().unwrap();
 
-    let async_resolver = create_resolver(dns1_sock, dns2_sock).await;
-    // let res_ref : &'static TokioAsyncResolver = &async_resolver;
-    // let async_resolver = create_resolver(dns1_sock, dns2_sock).await;
-    // let res_ref : &'static TokioAsyncResolver = &async_resolver;
-
-    // let resolver = Arc::new(res_ref);
-    let resolver = Arc::new(async_resolver);
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8100));
+    let resolver = Arc::new(create_resolver(dns1_sock, dns2_sock).await);
+    let addr = SocketAddr::from((bind_addr.unwrap().ip(), 9823));
     let resolver_cache = Arc::new(Mutex::new(LruCache::new(1000)));
 
     let http_resolver = CacheResolver::new(resolver.clone(), resolver_cache.clone());
     let connector = HttpConnector::new_with_resolver(http_resolver);
     let https = HttpsConnector::new_with_connector(connector);
-    let client
-        = Client::builder().build::<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>(https);
-    //let client = HttpClient::new();
+    let client: HttpClient = Client::builder().build(https);
     let gateway = Arc::new(ip_gateway());
-
 
     let make_service = make_service_fn(move |_| {
         let client = client.clone();

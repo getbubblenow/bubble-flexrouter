@@ -15,15 +15,11 @@ use os_info::{Info, Type};
 
 use tower::Service;
 
-use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
-use tokio::task::{JoinHandle, LocalSet};
+use tokio::task::JoinHandle;
 
 use trust_dns_resolver::TokioAsyncResolver;
 use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
-use futures_util::task::FutureObj;
-use futures_util::TryFutureExt;
-use futures::stream::{Unfold, Once};
 
 pub async fn create_resolver (dns1_sock : SocketAddr, dns2_sock : SocketAddr) -> TokioAsyncResolver {
     let mut resolver_config : ResolverConfig = ResolverConfig::new();
@@ -204,8 +200,6 @@ impl CacheResolver {
 }
 
 pub struct IpAddrs {
-    ip: IpAddr,
-    addr: SocketAddr,
     iter: std::vec::IntoIter<SocketAddr>,
 }
 
@@ -223,7 +217,7 @@ pub async fn resolve_to_result(host : String,
     let ip = resolve_with_cache(host.as_str(), &resolver, cache).await;
     let ip_addr: IpAddr = ip.parse().unwrap();
     let sock = SocketAddr::new(ip_addr, 0);
-    Ok(IpAddrs { ip: ip_addr, addr: sock, iter: vec![sock].into_iter() })
+    Ok(IpAddrs { iter: vec![sock].into_iter() })
 }
 
 impl Service<Name> for CacheResolver {
