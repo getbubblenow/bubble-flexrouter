@@ -1,10 +1,11 @@
-#![deny(warnings)]
+//#![deny(warnings)]
 
 extern crate lru;
 
 use std::convert::Infallible;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
+use std::iter;
 
 use clap::{Arg, ArgMatches, App};
 
@@ -13,6 +14,9 @@ use futures_util::future::try_join;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::upgrade::Upgraded;
 use hyper::{Body, Client, Method, Request, Response, Server};
+use hyper::client::Builder;
+use hyper::client::HttpConnector;
+use hyper_tls::HttpsConnector;
 
 use lru::LruCache;
 
@@ -34,9 +38,6 @@ type HttpClient = Client<hyper::client::HttpConnector>;
 //    $ curl -i https://www.some_domain.com/
 #[tokio::main]
 async fn main() {
-    let client = HttpClient::new();
-    let gateway = Arc::new(ip_gateway());
-
     let args : ArgMatches = App::new("bubble-flexrouter")
         .version("0.1.0")
         .author("Jonathan Cobb <jonathan@getbubblenow.com>")
@@ -57,12 +58,29 @@ async fn main() {
             .takes_value(true))
         .get_matches();
 
-    let dns1_sock : SocketAddr = format!("{}:53", args.value_of("dns1").unwrap()).parse().unwrap();
-    let dns2_sock : SocketAddr = format!("{}:53", args.value_of("dns2").unwrap()).parse().unwrap();
-    let resolver = Arc::new(create_resolver(dns1_sock, dns2_sock).await);
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8100));
+    let dns1_ip = args.value_of("dns1").unwrap();
+    let dns1_sock : SocketAddr = format!("{}:53", dns1_ip).parse().unwrap();
+    let dns2_ip = args.value_of("dns2").unwrap();
+    let dns2_sock : SocketAddr = format!("{}:53", dns2_ip).parse().unwrap();
 
+    let async_resolver = create_resolver(dns1_sock, dns2_sock).await;
+    // let res_ref : &'static TokioAsyncResolver = &async_resolver;
+    // let async_resolver = create_resolver(dns1_sock, dns2_sock).await;
+    // let res_ref : &'static TokioAsyncResolver = &async_resolver;
+
+    // let resolver = Arc::new(res_ref);
+    let resolver = Arc::new(async_resolver);
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8100));
     let resolver_cache = Arc::new(Mutex::new(LruCache::new(1000)));
+
+    let http_resolver = CacheResolver::new(resolver.clone(), resolver_cache.clone());
+    let connector = HttpConnector::new_with_resolver(http_resolver);
+    let https = HttpsConnector::new_with_connector(connector);
+    let client
+        = Client::builder().build::<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>(https);
+    //let client = HttpClient::new();
+    let gateway = Arc::new(ip_gateway());
+
 
     let make_service = make_service_fn(move |_| {
         let client = client.clone();
@@ -90,7 +108,7 @@ async fn main() {
     }
 }
 
-async fn proxy(client: HttpClient,
+async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                gateway: Arc<String>,
                resolver: Arc<TokioAsyncResolver>,
                resolver_cache: Arc<Mutex<LruCache<String, String>>>,
@@ -123,10 +141,11 @@ async fn proxy(client: HttpClient,
         // Note: only after client received an empty body with STATUS_OK can the
         // connection be upgraded, so we can't return a response inside
         // `on_upgrade` future.
-        if let Some(addr) = host_addr(req.uri()) {
+        if let Some(addr) = host_addr(req.uri(), &ip_string) {
             tokio::task::spawn(async move {
                 match req.into_body().on_upgrade().await {
                     Ok(upgraded) => {
+                        println!(">>>> CONNECT: tunnelling to addr={:?}", addr);
                         if let Err(e) = tunnel(upgraded, addr).await {
                             eprintln!("server io error: {}", e);
                         };
@@ -137,19 +156,17 @@ async fn proxy(client: HttpClient,
 
             Ok(Response::new(Body::empty()))
         } else {
-            eprintln!("CONNECT host is not socket addr: {:?}", req.uri());
-            let mut resp = Response::new(Body::from("CONNECT must be to a socket address"));
-            *resp.status_mut() = http::StatusCode::BAD_REQUEST;
-
-            Ok(resp)
+            eprintln!(">>> CONNECT host is not socket addr: {:?}", req.uri());
+            return bad_request("CONNECT must be to a socket address");
         }
     } else {
+        // ensure client resolves hostname to the same IP we resolved
         client.request(req).await
     }
 }
 
-fn host_addr(uri: &http::Uri) -> Option<SocketAddr> {
-    uri.authority().and_then(|auth| auth.as_str().parse().ok())
+fn host_addr(uri: &http::Uri, ip: &String) -> Option<SocketAddr> {
+    Some(SocketAddr::new(ip.parse().unwrap(), u16::from(uri.port().unwrap())))
 }
 
 // Create a TCP connection to host:port, build a tunnel between the connection and

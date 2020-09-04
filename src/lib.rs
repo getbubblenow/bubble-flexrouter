@@ -1,17 +1,29 @@
-use std::net::SocketAddr;
+use std::future::Future;
+use std::net::{SocketAddr, IpAddr};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
+use std::io::Error;
+use std::pin::Pin;
+use std::task::{self, Poll};
 
 use hyper::{Body, Response};
+use hyper::client::connect::dns::Name;
 
 use lru::LruCache;
 
 use os_info::{Info, Type};
 
+use tower::Service;
+
+use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
+use tokio::task::{JoinHandle, LocalSet};
 
 use trust_dns_resolver::TokioAsyncResolver;
 use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
+use futures_util::task::FutureObj;
+use futures_util::TryFutureExt;
+use futures::stream::{Unfold, Once};
 
 pub async fn create_resolver (dns1_sock : SocketAddr, dns2_sock : SocketAddr) -> TokioAsyncResolver {
     let mut resolver_config : ResolverConfig = ResolverConfig::new();
@@ -104,6 +116,7 @@ pub async fn resolve_with_cache(host : &str,
     }
 }
 
+
 pub fn needs_static_route(ip_string : &String) -> bool {
     println!("needs_static_route: checking ip={:?}", ip_string);
     let info : Info = os_info::get();
@@ -176,4 +189,94 @@ pub fn bad_request (message : &str) -> Result<Response<Body>, hyper::Error> {
     let mut resp = Response::new(Body::from(String::from(message)));
     *resp.status_mut() = http::StatusCode::BAD_REQUEST;
     return Ok(resp);
+}
+
+#[derive(Clone)]
+pub struct CacheResolver {
+    _resolver: Arc<TokioAsyncResolver>,
+    _cache : Arc<Mutex<LruCache<String, String>>>
+}
+
+impl CacheResolver {
+    pub fn new(resolver : Arc<TokioAsyncResolver>, cache : Arc<Mutex<LruCache<String, String>>>) -> Self {
+        CacheResolver { _resolver: resolver, _cache: cache }
+    }
+}
+
+pub struct IpAddrs {
+    ip: IpAddr,
+    addr: SocketAddr,
+    iter: std::vec::IntoIter<SocketAddr>,
+}
+
+pub struct CacheAddrs {
+    inner: IpAddrs,
+}
+
+pub struct CacheFuture {
+    inner: JoinHandle<Result<IpAddrs, std::io::Error>>
+}
+
+pub async fn resolve_to_result(host : String,
+                               resolver : Arc<TokioAsyncResolver>,
+                               cache: Arc<Mutex<LruCache<String, String>>>) -> Result<IpAddrs, Error>{
+    let ip = resolve_with_cache(host.as_str(), &resolver, cache).await;
+    let ip_addr: IpAddr = ip.parse().unwrap();
+    let sock = SocketAddr::new(ip_addr, 0);
+    Ok(IpAddrs { ip: ip_addr, addr: sock, iter: vec![sock].into_iter() })
+}
+
+impl Service<Name> for CacheResolver {
+    type Response = CacheAddrs;
+    type Error = std::io::Error;
+    type Future = CacheFuture;
+
+    fn poll_ready(&mut self, _cx: &mut task::Context<'_>) -> Poll<Result<(), std::io::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, name: Name) -> CacheFuture {
+        println!("+++++++ resolving host={:?}", name.as_str());
+        let resolver : Arc<TokioAsyncResolver> = self._resolver.clone();
+        let cache: Arc<Mutex<LruCache<String, String>>> = self._cache.clone();
+        let addrs = tokio::task::spawn(
+            resolve_to_result(String::from(name.as_str()), resolver, cache)
+            // resolve_with_cache(host.as_str(), &resolver, cache)
+        );
+        CacheFuture { inner: addrs }
+    }
+}
+
+impl Future for CacheFuture {
+    type Output = Result<CacheAddrs, std::io::Error>;
+
+    fn poll(mut self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
+        Pin::new(&mut self.inner).poll(cx).map(|res| match res {
+            Ok(Ok(addrs)) => Ok(CacheAddrs { inner: addrs }),
+            Ok(Err(err)) => Err(err),
+            Err(join_err) => {
+                if join_err.is_cancelled() {
+                    Err(std::io::Error::new(std::io::ErrorKind::Interrupted, join_err))
+                } else {
+                    panic!("gai background task failed: {:?}", join_err)
+                }
+            }
+        })
+    }
+}
+
+impl Iterator for IpAddrs {
+    type Item = SocketAddr;
+    #[inline]
+    fn next(&mut self) -> Option<SocketAddr> {
+        self.iter.next()
+    }
+}
+
+impl Iterator for CacheAddrs {
+    type Item = IpAddr;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|sa| sa.ip())
+    }
 }
