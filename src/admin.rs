@@ -31,7 +31,7 @@ struct AdminRegistration {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct BubbleRegistration {
     ip: String,
-    port: u16,
+    port: String,
     auth_token: String
 }
 
@@ -86,7 +86,7 @@ async fn handle_register(registration : AdminRegistration,
         // create the registration object
         let bubble_registration = BubbleRegistration {
             ip: proxy_ip,
-            port: proxy_port,
+            port: proxy_port.to_string(),
             auth_token: token
         };
 
