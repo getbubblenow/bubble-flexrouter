@@ -29,7 +29,9 @@ use tokio::sync::Mutex;
 
 use trust_dns_resolver::TokioAsyncResolver;
 
-use bubble_flexrouter::*;
+use bubble_flexrouter::dns_cache::*;
+use bubble_flexrouter::net::*;
+use bubble_flexrouter::hyper_util::bad_request;
 
 type HttpClient = Client<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>;
 
