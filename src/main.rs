@@ -8,6 +8,7 @@ extern crate lru;
 
 use std::convert::Infallible;
 use std::net::SocketAddr;
+use std::process::exit;
 use std::sync::Arc;
 
 use clap::{Arg, ArgMatches, App};
@@ -22,6 +23,8 @@ use lru::LruCache;
 use pnet::datalink;
 
 use tokio::sync::Mutex;
+
+use users::get_current_uid;
 
 use bubble_flexrouter::dns_cache::*;
 use bubble_flexrouter::net::*;
@@ -84,7 +87,21 @@ async fn main() {
             .takes_value(true))
         .get_matches();
 
-    let proxy_ip = args.value_of("proxy_ip").unwrap();
+    println!("\nThe ID of the current user is {}\n", get_current_uid());
+
+    let password_file_opt = args.value_of("password_file");
+    if password_file_opt.is_none() {
+        eprintln!("\nERROR: password-file argument is required\n");
+        exit(2);
+    }
+
+    let proxy_ip_opt = args.value_of("proxy_ip");
+    if proxy_ip_opt.is_none() {
+        eprintln!("\nERROR: proxy-ip argument is required\n");
+        exit(2);
+    }
+
+    let proxy_ip = proxy_ip_opt.unwrap();
     let mut bind_addr = None;
     for iface in datalink::interfaces() {
         if iface.is_loopback() { continue; }
@@ -97,7 +114,8 @@ async fn main() {
         }
     }
     if bind_addr.is_none() {
-        panic!(format!("Could not find IP for binding: {}", proxy_ip));
+        eprintln!("\nERROR: Could not find IP for binding: {}\n", proxy_ip);
+        exit(2);
     }
 
     let dns1_ip = args.value_of("dns1").unwrap();
