@@ -36,8 +36,7 @@ struct BubbleRegistration {
 
 pub async fn start_admin (admin_port : u16,
                           proxy_port : u16,
-                          hashed_password : String,
-                          session_id : String) {
+                          hashed_password : String) {
     let admin_sock: SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
 
     let register = warp::path!("register")
@@ -45,7 +44,6 @@ pub async fn start_admin (admin_port : u16,
         .and(warp::body::json())
         .and(warp::any().map(move || proxy_port))
         .and(warp::any().map(move || hashed_password.clone()))
-        .and(warp::any().map(move || session_id.clone()))
         .and_then(handle_register);
 
     let routes = warp::post().and(register);
@@ -59,8 +57,7 @@ const HEADER_BUBBLE_SESSION: &'static str = "X-Bubble-Session";
 
 async fn handle_register(registration : AdminRegistration,
                          proxy_port : u16,
-                         hashed_password : String,
-                         session_id : String) -> Result<impl warp::Reply, warp::Rejection> {
+                         hashed_password : String) -> Result<impl warp::Reply, warp::Rejection> {
     let pass_result = is_correct_password(registration.password, hashed_password);
     if pass_result.is_err() {
         eprintln!("handle_register: error verifying password: {:?}", pass_result.err());
@@ -93,7 +90,7 @@ async fn handle_register(registration : AdminRegistration,
         let url = format!("https://{}/me/flexRouters", registration.bubble);
 
         match client.put(url.as_str())
-            .header(HEADER_BUBBLE_SESSION, session_id)
+            .header(HEADER_BUBBLE_SESSION, registration.session)
             .json(&bubble_registration)
             .send().await {
             Ok(response) => {
