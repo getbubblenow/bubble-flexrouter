@@ -125,18 +125,18 @@ async fn main() {
     }
 
     let proxy_ip = proxy_ip_opt.unwrap();
-    let mut bind_addr = None;
+    let mut proxy_bind_addr = None;
     for iface in datalink::interfaces() {
         if iface.is_loopback() { continue; }
         if !iface.is_up() { continue; }
         for ip in iface.ips {
             if ip.ip().to_string().eq(proxy_ip) {
-                bind_addr = Some(ip);
+                proxy_bind_addr = Some(ip);
             }
             break;
         }
     }
-    if bind_addr.is_none() {
+    if proxy_bind_addr.is_none() {
         eprintln!("\nERROR: Could not find IP for binding: {}\n", proxy_ip);
         exit(2);
     }
@@ -144,5 +144,5 @@ async fn main() {
     let dns1_ip = args.value_of("dns1").unwrap();
     let dns2_ip = args.value_of("dns2").unwrap();
     let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
-    start_proxy(dns1_ip, dns2_ip, bind_addr.unwrap().ip(), proxy_port);
+    start_proxy(dns1_ip, dns2_ip, proxy_bind_addr.unwrap().ip(), proxy_port);
 }

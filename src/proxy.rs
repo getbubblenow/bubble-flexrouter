@@ -66,13 +66,8 @@ pub async fn start_proxy (dns1_ip : &str,
         }
     });
 
-    let server = Server::bind(&addr).serve(make_service);
-
-    println!("Listening on http://{}", addr);
-
-    if let Err(e) = server.await {
-        eprintln!("server error: {}", e);
-    }
+    Server::bind(&addr).serve(make_service);
+    println!("Proxy listening on {}", addr);
 }
 
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
