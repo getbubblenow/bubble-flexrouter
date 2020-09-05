@@ -4,8 +4,6 @@
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
  */
 
-extern crate lru;
-
 use std::process::exit;
 
 use clap::{Arg, ArgMatches, App};
