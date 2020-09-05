@@ -7,3 +7,4 @@ pub mod util;
 pub mod hyper_util;
 pub mod net;
 pub mod dns_cache;
+pub mod proxy;
