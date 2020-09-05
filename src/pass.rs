@@ -10,12 +10,15 @@ extern crate rand;
 use std::env;
 use std::fs;
 use std::fs::File;
+use std::io::Write;
 use std::path::Path;
 use std::process::exit;
 
-use rand::distributions::Alphanumeric;
-use self::rand::Rng;
-use std::io::Write;
+use bcrypt::{DEFAULT_COST, BcryptResult, hash, verify};
+
+pub fn is_correct_password(given_password : String, hashed_password : String) -> BcryptResult<bool> {
+    verify(given_password, hashed_password.as_str())
+}
 
 pub fn init_password (password_file_name : &str, password_opt : Option<&str>) -> String {
     if password_opt.is_some() {
@@ -44,14 +47,18 @@ pub fn init_password (password_file_name : &str, password_opt : Option<&str>) ->
         }
         let mut password_file = password_file_result.unwrap();
 
-        let salt = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(10)
-            .collect::<String>();
-        let mut bcrypted_pass : [u8; 24] = [0; 24];
-        bcrypt::bcrypt(14, &salt.as_bytes(), password_val.as_bytes(), &mut bcrypted_pass);
+        let bcrypt_result = hash(password_val, DEFAULT_COST);
+        if bcrypt_result.is_err() {
+            let err = bcrypt_result.err();
+            if err.is_none() {
+                eprintln!("\nERROR: unknown error encrypting password\n");
+            } else {
+                eprintln!("\nERROR: error encrypting password: {:?}\n", err.unwrap());
+            }
+            exit(3);
+        }
 
-        let write_result = password_file.write_all(&bcrypted_pass);
+        let write_result = password_file.write_all(bcrypt_result.unwrap().as_bytes());
         if write_result.is_err() {
             let err = write_result.err();
             if err.is_none() {

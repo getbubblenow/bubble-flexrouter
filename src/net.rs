@@ -8,6 +8,30 @@ use std::process::{exit, Command, Stdio};
 
 use whoami::{platform, Platform};
 
+pub fn is_private_ip(ip : String) -> bool {
+    return ip.starts_with("10.")
+        || ip.starts_with("192.168.")
+        || ip.starts_with("172.16.")
+        || ip.starts_with("172.17.")
+        || ip.starts_with("172.18.")
+        || ip.starts_with("172.19.")
+        || ip.starts_with("172.20.")
+        || ip.starts_with("172.21.")
+        || ip.starts_with("172.22.")
+        || ip.starts_with("172.23.")
+        || ip.starts_with("172.24.")
+        || ip.starts_with("172.25.")
+        || ip.starts_with("172.26.")
+        || ip.starts_with("172.27.")
+        || ip.starts_with("172.28.")
+        || ip.starts_with("172.29.")
+        || ip.starts_with("172.30.")
+        || ip.starts_with("172.31.")
+        || ip.starts_with("fd00::")
+        || ip.starts_with("fd0::")
+        || ip.starts_with("fd::")
+}
+
 pub fn ip_gateway() -> String {
     let platform: Platform = platform();
     return match platform {

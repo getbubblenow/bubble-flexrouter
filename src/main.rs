@@ -12,6 +12,8 @@ use pnet::datalink;
 
 use whoami;
 
+use bubble_flexrouter::admin::start_admin;
+use bubble_flexrouter::net::is_private_ip;
 use bubble_flexrouter::pass::init_password;
 use bubble_flexrouter::proxy::start_proxy;
 
@@ -116,7 +118,7 @@ async fn main() {
     let password_file = password_file_opt.unwrap();
 
     let password_opt = args.value_of("password_env_var");
-    let password = init_password(password_file, password_opt);
+    let password_hash = init_password(password_file, password_opt);
 
     let proxy_ip_opt = args.value_of("proxy_ip");
     if proxy_ip_opt.is_none() {
@@ -125,6 +127,10 @@ async fn main() {
     }
 
     let proxy_ip = proxy_ip_opt.unwrap();
+    if !is_private_ip(proxy_ip.to_string()) {
+        eprintln!("\nERROR: proxy IP must be a private IP address: {}\n", proxy_ip);
+        exit(2);
+    }
     let mut proxy_bind_addr = None;
     for iface in datalink::interfaces() {
         if iface.is_loopback() { continue; }
@@ -140,6 +146,9 @@ async fn main() {
         eprintln!("\nERROR: Could not find IP for binding: {}\n", proxy_ip);
         exit(2);
     }
+
+    let admin_port = args.value_of("admin_port").unwrap().parse::<u16>().unwrap();
+    start_admin(admin_port, password_hash).await;
 
     let dns1_ip = args.value_of("dns1").unwrap();
     let dns2_ip = args.value_of("dns2").unwrap();
