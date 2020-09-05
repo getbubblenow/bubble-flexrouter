@@ -30,11 +30,13 @@ struct AdminRegistration {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct BubbleRegistration {
-    auth_token: String,
-    port: u16
+    ip: String,
+    port: u16,
+    auth_token: String
 }
 
 pub async fn start_admin (admin_port : u16,
+                          proxy_ip : String,
                           proxy_port : u16,
                           hashed_password : String) {
     let admin_sock: SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
@@ -42,6 +44,7 @@ pub async fn start_admin (admin_port : u16,
     let register = warp::path!("register")
         .and(warp::body::content_length_limit(1024 * 16))
         .and(warp::body::json())
+        .and(warp::any().map(move || proxy_ip.clone()))
         .and(warp::any().map(move || proxy_port))
         .and(warp::any().map(move || hashed_password.clone()))
         .and_then(handle_register);
@@ -56,6 +59,7 @@ pub async fn start_admin (admin_port : u16,
 const HEADER_BUBBLE_SESSION: &'static str = "X-Bubble-Session";
 
 async fn handle_register(registration : AdminRegistration,
+                         proxy_ip: String,
                          proxy_port : u16,
                          hashed_password : String) -> Result<impl warp::Reply, warp::Rejection> {
     let pass_result = is_correct_password(registration.password, hashed_password);
@@ -81,6 +85,7 @@ async fn handle_register(registration : AdminRegistration,
 
         // create the registration object
         let bubble_registration = BubbleRegistration {
+            ip: proxy_ip,
             port: proxy_port,
             auth_token: token
         };

@@ -115,9 +115,10 @@ async fn main() {
     let dns1_ip = args.value_of("dns1").unwrap();
     let dns2_ip = args.value_of("dns2").unwrap();
     let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
+    let proxy_ip = proxy_bind_addr.unwrap().ip();
 
-    let proxy = start_proxy(dns1_ip, dns2_ip, proxy_bind_addr.unwrap().ip(), proxy_port);
-    let admin = start_admin(admin_port, proxy_port, password_hash);
+    let proxy = start_proxy(dns1_ip, dns2_ip, proxy_ip, proxy_port);
+    let admin = start_admin(admin_port, proxy_ip.to_string(), proxy_port, password_hash);
     proxy.await;
     admin.await;
 }
