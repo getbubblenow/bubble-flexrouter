@@ -17,7 +17,7 @@ use std::process::exit;
 use bcrypt::{DEFAULT_COST, BcryptResult, hash, verify};
 
 pub fn is_correct_password(given_password : String, hashed_password : String) -> BcryptResult<bool> {
-    verify(given_password, hashed_password.as_str())
+    verify(given_password.trim(), hashed_password.trim())
 }
 
 pub fn init_password (password_file_name : &str, password_opt : Option<&str>) -> String {
