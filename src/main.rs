@@ -56,20 +56,48 @@ async fn main() {
             .help("Secondary DNS server")
             .default_value("1.0.0.1")
             .takes_value(true))
+        .arg(Arg::with_name("proxy_ip")
+            .short("i")
+            .long("proxy-ip")
+            .value_name("IP_ADDRESS")
+            .help("IP address to listen for proxy connections, must be a private IP")
+            .takes_value(true))
+        .arg(Arg::with_name("proxy_port")
+            .short("p")
+            .long("proxy-port")
+            .value_name("PORT")
+            .help("port to listen for proxy connections")
+            .default_value("9823")
+            .takes_value(true))
+        .arg(Arg::with_name("admin_port")
+            .short("a")
+            .long("admin-port")
+            .value_name("PORT")
+            .help("port to listen for admin connections")
+            .default_value("9833")
+            .takes_value(true))
+        .arg(Arg::with_name("password_file")
+            .short("w")
+            .long("password-file")
+            .value_name("FILE")
+            .help("file containing bcrypt-hashed password required for admin commands")
+            .takes_value(true))
         .get_matches();
 
+    let proxy_ip = args.value_of("proxy_ip").unwrap();
     let mut bind_addr = None;
     for iface in datalink::interfaces() {
         if iface.is_loopback() { continue; }
         if !iface.is_up() { continue; }
         for ip in iface.ips {
-            if ip.ip().is_ipv6() { continue; }
-            bind_addr = Some(ip);
+            if ip.ip().to_string().eq(proxy_ip) {
+                bind_addr = Some(ip);
+            }
             break;
         }
     }
     if bind_addr.is_none() {
-        panic!("No eligible IP interface found for binding");
+        panic!(format!("Could not find IP for binding: {}", proxy_ip));
     }
 
     let dns1_ip = args.value_of("dns1").unwrap();
@@ -78,7 +106,6 @@ async fn main() {
     let dns2_sock : SocketAddr = format!("{}:53", dns2_ip).parse().unwrap();
 
     let resolver = Arc::new(create_resolver(dns1_sock, dns2_sock).await);
-    let addr = SocketAddr::from((bind_addr.unwrap().ip(), 9823));
     let resolver_cache = Arc::new(Mutex::new(LruCache::new(1000)));
 
     let http_resolver = CacheResolver::new(resolver.clone(), resolver_cache.clone());
@@ -86,6 +113,9 @@ async fn main() {
     let https = HttpsConnector::new_with_connector(connector);
     let client: HttpClient = Client::builder().build(https);
     let gateway = Arc::new(ip_gateway());
+
+    let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
+    let addr = SocketAddr::from((bind_addr.unwrap().ip(), proxy_port));
 
     let make_service = make_service_fn(move |_| {
         let client = client.clone();
