@@ -1,4 +1,4 @@
-#![deny(warnings)]
+//#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -24,8 +24,9 @@ use pnet::datalink;
 
 use tokio::sync::Mutex;
 
-use users::get_current_uid;
+use whoami;
 
+use bubble_flexrouter::pass::init_password;
 use bubble_flexrouter::dns_cache::*;
 use bubble_flexrouter::net::*;
 use bubble_flexrouter::proxy::*;
@@ -85,15 +86,55 @@ async fn main() {
             .value_name("FILE")
             .help("file containing bcrypt-hashed password required for admin commands")
             .takes_value(true))
+        .arg(Arg::with_name("password_env_var")
+            .short("W")
+            .long("password-env-var")
+            .value_name("ENV_VAR_NAME")
+            .help("environment variable containing the admin password. overwrites previous value")
+            .takes_value(true))
         .get_matches();
 
-    println!("\nThe ID of the current user is {}\n", get_current_uid());
+    // todo: ensure we are running as root (or Administrator on Windows)
+    println!("\nThe ID of the current user is {}\n", whoami::username());
+
+    println!(
+        "User→Name      whoami::realname():    {}",
+        whoami::realname()
+    );
+    println!(
+        "User→Username  whoami::username():    {}",
+        whoami::username()
+    );
+    println!(
+        "Host→Name      whoami::devicename():  {}",
+        whoami::devicename()
+    );
+    println!(
+        "Host→Hostname  whoami::hostname():    {}",
+        whoami::hostname()
+    );
+    println!(
+        "Platform       whoami::platform():    {}",
+        whoami::platform()
+    );
+    println!(
+        "OS Distro      whoami::distro():      {}",
+        whoami::distro()
+    );
+    println!(
+        "Desktop Env.   whoami::desktop_env(): {}",
+        whoami::desktop_env()
+    );
 
     let password_file_opt = args.value_of("password_file");
     if password_file_opt.is_none() {
         eprintln!("\nERROR: password-file argument is required\n");
         exit(2);
     }
+    let password_file = password_file_opt.unwrap();
+
+    let password_opt = args.value_of("password_env_var");
+    //let password = init_password(password_file, password_opt);
 
     let proxy_ip_opt = args.value_of("proxy_ip");
     if proxy_ip_opt.is_none() {

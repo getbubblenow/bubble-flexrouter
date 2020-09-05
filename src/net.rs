@@ -105,3 +105,36 @@ pub fn create_static_route(gateway: &String, ip_string: &String) -> bool {
     }
     ok
 }
+
+pub fn remove_static_route(ip_string: &String) -> bool {
+    println!("remove_static_route: removing ip={}", ip_string);
+    let info: Info = os_info::get();
+    let ostype: Type = info.os_type();
+    let output = if ostype == Type::Windows {
+        Command::new("C:\\Windows\\System32\\cmd.exe")
+            .stdin(Stdio::null())
+            .arg("/c")
+            .arg("route").arg("del").arg(ip_string)
+            .output().unwrap().stderr
+    } else if ostype == Type::Macos {
+        Command::new("/bin/sh")
+            .stdin(Stdio::null())
+            .arg("-c")
+            .arg(format!("sudo route -n del {}", ip_string))
+            .output().unwrap().stderr
+    } else {
+        Command::new("/bin/sh")
+            .stdin(Stdio::null())
+            .arg("-c")
+            .arg(format!("sudo ip route del {}", ip_string))
+            .output().unwrap().stderr
+    };
+    let data = String::from_utf8(output).unwrap();
+    let mut parts = data.split_ascii_whitespace();
+    let first_part = parts.next();
+    let ok = first_part.is_none() || first_part.unwrap().len() == 0;
+    if !ok {
+        println!("remove_static_route: error removing route to {}: {}", ip_string, data);
+    }
+    ok
+}

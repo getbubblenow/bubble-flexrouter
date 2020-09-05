@@ -5,6 +5,7 @@
  */
 
 pub mod util;
+pub mod pass;
 pub mod hyper_util;
 pub mod net;
 pub mod dns_cache;
