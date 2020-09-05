@@ -6,32 +6,16 @@
 
 extern crate lru;
 
-use std::convert::Infallible;
-use std::net::SocketAddr;
 use std::process::exit;
-use std::sync::Arc;
 
 use clap::{Arg, ArgMatches, App};
 
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Client, Server};
-use hyper::client::HttpConnector;
-use hyper_tls::HttpsConnector;
-
-use lru::LruCache;
-
 use pnet::datalink;
-
-use tokio::sync::Mutex;
 
 use whoami;
 
 use bubble_flexrouter::pass::init_password;
-use bubble_flexrouter::dns_cache::*;
-use bubble_flexrouter::net::*;
-use bubble_flexrouter::proxy::*;
-
-type HttpClient = Client<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>;
+use bubble_flexrouter::proxy::start_proxy;
 
 // To try this example:
 // 1. cargo run --example http_proxy
@@ -134,7 +118,7 @@ async fn main() {
     let password_file = password_file_opt.unwrap();
 
     let password_opt = args.value_of("password_env_var");
-    //let password = init_password(password_file, password_opt);
+    let password = init_password(password_file, password_opt);
 
     let proxy_ip_opt = args.value_of("proxy_ip");
     if proxy_ip_opt.is_none() {
@@ -160,44 +144,7 @@ async fn main() {
     }
 
     let dns1_ip = args.value_of("dns1").unwrap();
-    let dns1_sock : SocketAddr = format!("{}:53", dns1_ip).parse().unwrap();
     let dns2_ip = args.value_of("dns2").unwrap();
-    let dns2_sock : SocketAddr = format!("{}:53", dns2_ip).parse().unwrap();
-
-    let resolver = Arc::new(create_resolver(dns1_sock, dns2_sock).await);
-    let resolver_cache = Arc::new(Mutex::new(LruCache::new(1000)));
-
-    let http_resolver = CacheResolver::new(resolver.clone(), resolver_cache.clone());
-    let connector = HttpConnector::new_with_resolver(http_resolver);
-    let https = HttpsConnector::new_with_connector(connector);
-    let client: HttpClient = Client::builder().build(https);
-    let gateway = Arc::new(ip_gateway());
-
     let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
-    let addr = SocketAddr::from((bind_addr.unwrap().ip(), proxy_port));
-
-    let make_service = make_service_fn(move |_| {
-        let client = client.clone();
-        let gateway = gateway.clone();
-        let resolver = resolver.clone();
-        let resolver_cache = resolver_cache.clone();
-        async move {
-            Ok::<_, Infallible>(service_fn(
-                move |req| proxy(
-                    client.clone(),
-                    gateway.clone(),
-                    resolver.clone(),
-                    resolver_cache.clone(),
-                    req)
-            ))
-        }
-    });
-
-    let server = Server::bind(&addr).serve(make_service);
-
-    println!("Listening on http://{}", addr);
-
-    if let Err(e) = server.await {
-        eprintln!("server error: {}", e);
-    }
+    start_proxy(dns1_ip, dns2_ip, bind_addr.unwrap().ip(), proxy_port);
 }

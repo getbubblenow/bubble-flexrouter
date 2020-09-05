@@ -6,14 +6,16 @@
 
 extern crate lru;
 
-use std::net::SocketAddr;
+use std::convert::Infallible;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 
 use futures_util::future::try_join;
 
-use hyper::upgrade::Upgraded;
-use hyper::{Body, Client, Method, Request, Response};
+use hyper::{Body, Client, Method, Request, Response, Server};
 use hyper::client::HttpConnector;
+use hyper::service::{make_service_fn, service_fn};
+use hyper::upgrade::Upgraded;
 use hyper_tls::HttpsConnector;
 
 use lru::LruCache;
@@ -27,13 +29,57 @@ use crate::dns_cache::*;
 use crate::net::*;
 use crate::hyper_util::bad_request;
 
-//type HttpClient = Client<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>;
+type HttpClient = Client<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>;
 
-pub async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
-                   gateway: Arc<String>,
-                   resolver: Arc<TokioAsyncResolver>,
-                   resolver_cache: Arc<Mutex<LruCache<String, String>>>,
-                   req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+pub async fn start_proxy (dns1_ip : &str,
+                          dns2_ip: &str,
+                          proxy_ip: IpAddr,
+                          proxy_port: u16) {
+    let dns1_sock : SocketAddr = format!("{}:53", dns1_ip).parse().unwrap();
+    let dns2_sock : SocketAddr = format!("{}:53", dns2_ip).parse().unwrap();
+
+    let resolver = Arc::new(create_resolver(dns1_sock, dns2_sock).await);
+    let resolver_cache = Arc::new(Mutex::new(LruCache::new(1000)));
+
+    let http_resolver = CacheResolver::new(resolver.clone(), resolver_cache.clone());
+    let connector = HttpConnector::new_with_resolver(http_resolver);
+    let https = HttpsConnector::new_with_connector(connector);
+    let client: HttpClient = Client::builder().build(https);
+    let gateway = Arc::new(ip_gateway());
+
+    let addr = SocketAddr::from((proxy_ip, proxy_port));
+
+    let make_service = make_service_fn(move |_| {
+        let client = client.clone();
+        let gateway = gateway.clone();
+        let resolver = resolver.clone();
+        let resolver_cache = resolver_cache.clone();
+        async move {
+            Ok::<_, Infallible>(service_fn(
+                move |req| proxy(
+                    client.clone(),
+                    gateway.clone(),
+                    resolver.clone(),
+                    resolver_cache.clone(),
+                    req)
+            ))
+        }
+    });
+
+    let server = Server::bind(&addr).serve(make_service);
+
+    println!("Listening on http://{}", addr);
+
+    if let Err(e) = server.await {
+        eprintln!("server error: {}", e);
+    }
+}
+
+async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
+               gateway: Arc<String>,
+               resolver: Arc<TokioAsyncResolver>,
+               resolver_cache: Arc<Mutex<LruCache<String, String>>>,
+               req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     let host = req.uri().host();
     if host.is_none() {
         return bad_request("No host!");

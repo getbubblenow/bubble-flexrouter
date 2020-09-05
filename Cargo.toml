@@ -6,6 +6,7 @@ authors = ["Jonathan Cobb <jonathan@getbubblenow.com>"]
 edition = "2018"
 
 [dependencies]
+bcrypt = "0.6.3"
 clap = "2.33.0"
 futures = "0.3.5"
 futures-core = { version = "0.3", default-features = false }
@@ -16,6 +17,7 @@ hyper = { version = "0.13.7", features = ["stream"] }
 hyper-tls = "0.4.3"
 lru = "0.6.0"
 pnet = "0.26.0"
+rand = "0.7.3"
 tokio = { version = "0.2.22", features = ["full"] }
 tower = "0.3.1"
 trust-dns-resolver = "0.19.5"
