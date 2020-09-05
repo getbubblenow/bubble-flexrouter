@@ -4,7 +4,6 @@
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
  */
 
-pub mod util;
 pub mod pass;
 pub mod hyper_util;
 pub mod net;
