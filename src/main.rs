@@ -4,6 +4,7 @@
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
  */
 
+use std::env;
 use std::process::exit;
 
 use clap::{Arg, ArgMatches, App};
@@ -17,13 +18,6 @@ use bubble_flexrouter::net::is_private_ip;
 use bubble_flexrouter::pass::init_password;
 use bubble_flexrouter::proxy::start_proxy;
 
-// To try this example:
-// 1. cargo run --example http_proxy
-// 2. config http_proxy in command line
-//    $ export http_proxy=http://127.0.0.1:8100
-//    $ export https_proxy=http://127.0.0.1:8100
-// 3. send requests
-//    $ curl -i https://www.some_domain.com/
 #[tokio::main]
 async fn main() {
     let args : ArgMatches = App::new("bubble-flexrouter")
@@ -76,39 +70,16 @@ async fn main() {
             .value_name("ENV_VAR_NAME")
             .help("environment variable containing the admin password. overwrites previous value")
             .takes_value(true))
+        .arg(Arg::with_name("session_env_var")
+            .short("s")
+            .long("session-env-var")
+            .value_name("ENV_VAR_NAME")
+            .help("environment variable containing the session ID")
+            .takes_value(true))
         .get_matches();
 
     // todo: ensure we are running as root (or Administrator on Windows)
     println!("\nThe ID of the current user is {}\n", whoami::username());
-
-    println!(
-        "User→Name      whoami::realname():    {}",
-        whoami::realname()
-    );
-    println!(
-        "User→Username  whoami::username():    {}",
-        whoami::username()
-    );
-    println!(
-        "Host→Name      whoami::devicename():  {}",
-        whoami::devicename()
-    );
-    println!(
-        "Host→Hostname  whoami::hostname():    {}",
-        whoami::hostname()
-    );
-    println!(
-        "Platform       whoami::platform():    {}",
-        whoami::platform()
-    );
-    println!(
-        "OS Distro      whoami::distro():      {}",
-        whoami::distro()
-    );
-    println!(
-        "Desktop Env.   whoami::desktop_env(): {}",
-        whoami::desktop_env()
-    );
 
     let password_file_opt = args.value_of("password_file");
     if password_file_opt.is_none() {
@@ -119,6 +90,27 @@ async fn main() {
 
     let password_opt = args.value_of("password_env_var");
     let password_hash = init_password(password_file, password_opt);
+
+    let session_opt = args.value_of("session_env_var");
+    if session_opt.is_none() {
+        eprintln!("\nERROR: session-env-var argument is required\n");
+        exit(2);
+    }
+    let session_env_var = session_opt.unwrap();
+    if session_env_var.len() == 0 {
+        eprintln!("\nERROR: session-env-var was empty\n");
+        exit(2);
+    }
+    let session_env_var_result = env::var(session_env_var);
+    if session_env_var_result.is_err() {
+        eprintln!("\nERROR: session-env-var argument was {} but that environment variable was not defined\n", session_env_var);
+        exit(2);
+    }
+    let session_id = session_env_var_result.unwrap();
+    if session_id.trim().len() == 0 {
+        eprintln!("\nERROR: session-env-var argument was {} but the value of that environment variable was empty\n", session_env_var);
+        exit(2);
+    }
 
     let proxy_ip_opt = args.value_of("proxy_ip");
     if proxy_ip_opt.is_none() {
@@ -148,10 +140,11 @@ async fn main() {
     }
 
     let admin_port = args.value_of("admin_port").unwrap().parse::<u16>().unwrap();
-    start_admin(admin_port, password_hash).await;
-
     let dns1_ip = args.value_of("dns1").unwrap();
     let dns2_ip = args.value_of("dns2").unwrap();
     let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
+
+    start_admin(admin_port, proxy_port, password_hash, session_id).await;
+
     start_proxy(dns1_ip, dns2_ip, proxy_bind_addr.unwrap().ip(), proxy_port);
 }
