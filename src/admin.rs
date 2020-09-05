@@ -93,7 +93,7 @@ async fn handle_register(registration : AdminRegistration,
         // PUT it and see if it worked
         let client = reqwest::Client::new();
         let url = format!("https://{}/api/me/flexRouters", registration.bubble);
-        println!("handle_register: registering ourself with {}", url);
+        println!("handle_register: registering ourself with {}, sending: {:?}", url, bubble_registration);
         match client.put(url.as_str())
             .header(HEADER_BUBBLE_SESSION, registration.session)
             .json(&bubble_registration)
