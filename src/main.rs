@@ -1,4 +1,4 @@
-//#![deny(warnings)]
+#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -144,7 +144,8 @@ async fn main() {
     let dns2_ip = args.value_of("dns2").unwrap();
     let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
 
-    start_admin(admin_port, proxy_port, password_hash, session_id).await;
-
-    start_proxy(dns1_ip, dns2_ip, proxy_bind_addr.unwrap().ip(), proxy_port);
+    let proxy = start_proxy(dns1_ip, dns2_ip, proxy_bind_addr.unwrap().ip(), proxy_port);
+    let admin = start_admin(admin_port, proxy_port, password_hash, session_id);
+    proxy.await;
+    admin.await;
 }

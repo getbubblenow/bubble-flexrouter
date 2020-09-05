@@ -67,7 +67,7 @@ pub async fn start_proxy (dns1_ip : &str,
     });
 
     Server::bind(&addr).serve(make_service);
-    println!("Proxy listening on {}", addr);
+    eprintln!("Proxy listening on {}", addr);
 }
 
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
@@ -81,7 +81,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     }
     let host = host.unwrap();
     let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
-    println!("req(host {} resolved to: {}): {:?}", host, ip_string, req);
+    eprintln!("req(host {} resolved to: {}): {:?}", host, ip_string, req);
 
     if needs_static_route(&ip_string) {
         if !create_static_route(&gateway, &ip_string) {
@@ -107,7 +107,6 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
             tokio::task::spawn(async move {
                 match req.into_body().on_upgrade().await {
                     Ok(upgraded) => {
-                        println!(">>>> CONNECT: tunnelling to addr={:?}", addr);
                         if let Err(e) = tunnel(upgraded, addr).await {
                             eprintln!("server io error: {}", e);
                         };
@@ -157,7 +156,7 @@ async fn tunnel(upgraded: Upgraded, addr: SocketAddr) -> std::io::Result<()> {
             );
         }
         Err(e) => {
-            println!("tunnel error: {}", e);
+            eprintln!("tunnel error: {}", e);
         }
     };
     Ok(())

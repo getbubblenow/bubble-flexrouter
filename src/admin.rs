@@ -50,9 +50,8 @@ pub async fn start_admin (admin_port : u16,
 
     let routes = warp::post().and(register);
 
-    let server = warp::serve(routes).run(admin_sock);
-    println!("Admin listening on {}", admin_sock);
-    server.await;
+    warp::serve(routes).run(admin_sock).await;
+    eprintln!("Admin listening on {}", admin_sock);
 }
 
 const HEADER_BUBBLE_SESSION: &'static str = "X-Bubble-Session";
