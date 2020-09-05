@@ -66,8 +66,10 @@ pub async fn start_proxy (dns1_ip : &str,
         }
     });
 
-    Server::bind(&addr).serve(make_service);
+    let server = Server::bind(&addr).serve(make_service);
     eprintln!("Proxy listening on {}", addr);
+    let result = server.await;
+    eprintln!("Proxy await result: {:?}", result);
 }
 
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
