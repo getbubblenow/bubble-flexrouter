@@ -1,4 +1,4 @@
-#![deny(warnings)]
+//#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -28,16 +28,23 @@ struct AdminRegistration {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct BubbleRegistration {
+    key: String,
     ip: String,
-    proxy_port: u16,
     auth_token: String
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+struct BubbleRegistrationResponse {
+    port: Option<u16>
 }
 
 pub async fn start_admin (admin_port : u16,
                           proxy_ip : String,
                           proxy_port : u16,
                           password_hash: String,
-                          auth_token : Arc<String>) {
+                          auth_token : Arc<String>,
+                          ssh_priv_key : Arc<String>,
+                          ssh_pub_key : Arc<String>) {
     let admin_sock: SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
 
     let register = warp::path!("register")
@@ -47,6 +54,8 @@ pub async fn start_admin (admin_port : u16,
         .and(warp::any().map(move || proxy_port))
         .and(warp::any().map(move || password_hash.clone()))
         .and(warp::any().map(move || auth_token.clone()))
+        .and(warp::any().map(move || ssh_priv_key.clone()))
+        .and(warp::any().map(move || ssh_pub_key.clone()))
         .and_then(handle_register);
 
     let routes = warp::post().and(register);
@@ -62,7 +71,9 @@ async fn handle_register(registration : AdminRegistration,
                          proxy_ip: String,
                          proxy_port : u16,
                          hashed_password : String,
-                         auth_token : Arc<String>) -> Result<impl warp::Reply, warp::Rejection> {
+                         auth_token : Arc<String>,
+                         ssh_priv_key : Arc<String>,
+                         ssh_pub_key : Arc<String>) -> Result<impl warp::Reply, warp::Rejection> {
     let pass_result = is_correct_password(registration.password, hashed_password);
     if pass_result.is_err() {
         error!("handle_register: error verifying password: {:?}", pass_result.err());
@@ -80,8 +91,8 @@ async fn handle_register(registration : AdminRegistration,
 
         // create the registration object
         let bubble_registration = BubbleRegistration {
+            key: ssh_pub_key.to_string(),
             ip: proxy_ip,
-            proxy_port,
             auth_token: auth_token.to_string()
         };
 
@@ -97,13 +108,41 @@ async fn handle_register(registration : AdminRegistration,
                 match response.status() {
                     ReqwestStatusCode::OK => {
                         info!("handle_register: successfully registered with bubble");
-                        Ok(warp::reply::with_status(
-                            "successfully registered with bubble",
-                            http::StatusCode::OK,
-                        ))
+                        let body_bytes = &response.bytes().await.unwrap();
+                        let body = String::from_utf8(body_bytes.to_vec()).unwrap();
+                        let reg_opt = serde_json::from_str(body.as_str());
+                        if reg_opt.is_err() {
+                            error!("handle_register: error registering with bubble, error parsing response: {}", body);
+                            Ok(warp::reply::with_status(
+                                "error registering with bubble, error parsing response",
+                                http::StatusCode::PRECONDITION_FAILED,
+                            ))
+                        } else {
+                            let reg_response: BubbleRegistrationResponse = reg_opt.unwrap();
+                            info!("handle_register: parsed response object: {:?}", reg_response);
+                            let port_opt = reg_response.port;
+                            if port_opt.is_none() {
+                                error!("handle_register: error registering with bubble, response did not include a port");
+                                Ok(warp::reply::with_status(
+                                    "error registering with bubble, response did not include a port",
+                                    http::StatusCode::PRECONDITION_FAILED,
+                                ))
+                            } else {
+                                let port = port_opt.unwrap();
+                                info!("handle_register: received port: {}", port);
+                                // todo: start or restart ssh service
+                                Ok(warp::reply::with_status(
+                                    "successfully registered with bubble",
+                                    http::StatusCode::OK,
+                                ))
+                            }
+                        }
                     },
                     _ => {
-                        error!("handle_register: error registering with bubble: {:?}", response.status());
+                        let status_code = &response.status();
+                        let body_bytes = &response.bytes().await.unwrap();
+                        let body = String::from_utf8(body_bytes.to_vec()).unwrap();
+                        error!("handle_register: error registering with bubble: {:?}: {}", status_code, body);
                         Ok(warp::reply::with_status(
                             "error registering with bubble",
                             http::StatusCode::PRECONDITION_FAILED,

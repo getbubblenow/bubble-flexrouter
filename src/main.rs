@@ -1,4 +1,4 @@
-#![deny(warnings)]
+//#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -14,7 +14,6 @@ extern crate stderrlog;
 
 extern crate rand;
 
-use std::fs;
 use std::path::Path;
 use std::process::exit;
 use std::sync::Arc;
@@ -34,6 +33,8 @@ use bubble_flexrouter::net::is_private_ip;
 use bubble_flexrouter::pass::init_password;
 use bubble_flexrouter::proxy::start_proxy;
 use bubble_flexrouter::util::read_required_env_var_argument;
+use bubble_flexrouter::util::read_required_env_var_argument_as_file;
+use bubble_flexrouter::util::read_path_to_string;
 
 const MIN_TOKEN_CHARS: usize = 50;
 const MAX_TOKEN_CHARS: usize = 100;
@@ -97,6 +98,13 @@ async fn main() {
             .value_name("ENV_VAR_NAME")
             .help("environment variable naming the file that contains the bubble token")
             .default_value("BUBBLE_FR_TOKEN")
+            .takes_value(true))
+        .arg(Arg::with_name("ssh_key_file")
+            .short("s")
+            .long("ssh-key-file")
+            .value_name("ENV_VAR_NAME")
+            .help("environment variable naming the file that contains the SSH key")
+            .default_value("BUBBLE_FR_SSH_KEY")
             .takes_value(true))
         .arg(Arg::with_name("log_level")
             .short("v")
@@ -163,35 +171,29 @@ async fn main() {
     let dns1_ip = args.value_of("dns1").unwrap();
     let dns2_ip = args.value_of("dns2").unwrap();
     let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
-    let proxy_ip = proxy_bind_addr.unwrap().ip();
+
+    let ssh_key_file_env_var_opt = args.value_of("ssh_key_file");
+    let ssh_key_path_path_string = read_required_env_var_argument("ssh-key-file", ssh_key_file_env_var_opt);
+    let ssh_key_path = Path::new(ssh_key_path_path_string.as_str());
+    if !ssh_key_path.exists() {
+        error!("read_required_env_var_argument_as_path: file does not exist: {}", ssh_key_path.to_str().unwrap());
+        exit(2);
+    }
+
+    let ssh_priv_key = Arc::new(read_path_to_string(ssh_key_path));
+    let ssh_pub_key_path_name = format!("{}.pub", ssh_key_path.to_str().unwrap());
+    let ssh_pub_key_path = Path::new(ssh_pub_key_path_name.as_str());
+    let ssh_pub_key = Arc::new(read_path_to_string(ssh_pub_key_path));
 
     let token_file_env_var_opt = args.value_of("token_file");
-    let token_path_string = read_required_env_var_argument("token-file", token_file_env_var_opt);
-    let token_path = token_path_string.as_str();
-    let token_file_path = Path::new(token_path);
-    if !token_file_path.exists() {
-        error!("main: token file does not exist: {}", token_path);
-        exit(2);
-    }
-
-    let auth_token_result = fs::read_to_string(&token_file_path);
-    if auth_token_result.is_err() {
-        let err = auth_token_result.err();
-        if err.is_none() {
-            error!("main: error reading token file {}", token_path);
-        } else {
-            error!("main: error reading token file {}: {:?}", token_path, err.unwrap());
-        }
-        exit(2);
-    }
-    let auth_token_string = auth_token_result.unwrap();
+    let auth_token_string = read_required_env_var_argument_as_file("token-file", token_file_env_var_opt);
     let auth_token_val = auth_token_string.trim();
     if auth_token_val.len() < MIN_TOKEN_CHARS {
-        error!("main: auth token in token file {} is too short, must be at least {} chars", token_path, MIN_TOKEN_CHARS);
+        error!("main: auth token in token file is too short, must be at least {} chars", MIN_TOKEN_CHARS);
         exit(2);
     }
     if auth_token_val.len() > MAX_TOKEN_CHARS {
-        error!("main: auth token in token file {} is too long, must be at most {} chars", token_path, MAX_TOKEN_CHARS);
+        error!("main: auth token in token file is too long, must be at most {} chars", MAX_TOKEN_CHARS);
         exit(2);
     }
     let auth_token = Arc::new(String::from(auth_token_val));
@@ -201,12 +203,13 @@ async fn main() {
         proxy_ip.to_string(),
         proxy_port,
         password_hash,
-        auth_token.clone()
+        auth_token.clone(),
+        ssh_priv_key.clone(),
+        ssh_pub_key.clone()
     );
     let proxy = start_proxy(
         dns1_ip,
         dns2_ip,
-        proxy_ip,
         proxy_port,
         auth_token.clone()
     );

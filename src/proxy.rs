@@ -42,7 +42,6 @@ type HttpClient = Client<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>
 
 pub async fn start_proxy (dns1_ip : &str,
                           dns2_ip: &str,
-                          proxy_ip: IpAddr,
                           proxy_port: u16,
                           auth_token : Arc<String>) {
     let dns1_sock : SocketAddr = format!("{}:53", dns1_ip).parse().unwrap();
@@ -57,7 +56,8 @@ pub async fn start_proxy (dns1_ip : &str,
     let client: HttpClient = Client::builder().build(https);
     let gateway = Arc::new(ip_gateway());
 
-    let addr = SocketAddr::from((proxy_ip, proxy_port));
+    let proxy_local_ip : IpAddr = "127.0.0.1".parse().unwrap();
+    let addr = SocketAddr::from((proxy_local_ip, proxy_port));
 
     let make_service = make_service_fn(move |_| {
         let client = client.clone();
