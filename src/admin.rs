@@ -5,6 +5,7 @@
  */
 
 use std::net::SocketAddr;
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 
 use log::{debug, info, error};
@@ -18,6 +19,7 @@ use warp;
 use warp::{Filter};
 
 use crate::pass::is_correct_password;
+use crate::net::ssh_command;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct AdminRegistration {
@@ -131,10 +133,36 @@ async fn handle_register(registration : AdminRegistration,
                                 let port = port_opt.unwrap();
                                 info!("handle_register: received port: {}", port);
                                 // todo: start or restart ssh service
-                                Ok(warp::reply::with_status(
-                                    "successfully registered with bubble",
-                                    http::StatusCode::OK,
-                                ))
+                                let tunnel = format!("{}:127.0.0.1:{}", port, proxy_port);
+                                let target = format!("bubble-flex@{}", registration.bubble);
+                                let ssh = Command::new(ssh_command())
+                                    .stdin(Stdio::null())
+                                    .stdout(Stdio::null())
+                                    .stderr(Stdio::null())
+                                    .arg("-Nn")
+                                    .arg("-R")
+                                    .arg(tunnel)
+                                    .arg(target)
+                                    .spawn();
+                                if ssh.is_err() {
+                                    let err = ssh.err();
+                                    if err.is_none() {
+                                        error!("handle_register: error spawning ssh");
+                                    } else {
+                                        error!("handle_register: error spawning ssh: {:?}", err.unwrap());
+                                    }
+                                    Ok(warp::reply::with_status(
+                                        "error spawning ssh",
+                                        http::StatusCode::PRECONDITION_FAILED,
+                                    ))
+                                } else {
+                                    let mut child = ssh.unwrap();
+                                    // child.kill();
+                                    Ok(warp::reply::with_status(
+                                        "successfully registered with bubble",
+                                        http::StatusCode::OK,
+                                    ))
+                                }
                             }
                         }
                     },

@@ -189,3 +189,20 @@ pub fn remove_static_route(ip_string: &String) -> bool {
     }
     ok
 }
+
+const SSH_WINDOWS: &'static str = "C:\\Windows\\System32\\OpenSSH\\ssh.exe";
+const SSH_MACOS: &'static str = "/usr/bin/ssh";
+const SSH_LINUX: &'static str = "/usr/bin/ssh";
+
+pub fn ssh_command() -> &'static str {
+    let platform: Platform = platform();
+    return match platform {
+        Platform::Windows => SSH_WINDOWS,
+        Platform::MacOS => SSH_MACOS,
+        Platform::Linux => SSH_LINUX,
+        _ => {
+            error!("ssh_command: unsupported platform: {:?}", platform);
+            exit(2);
+        }
+    }
+}
