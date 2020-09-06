@@ -84,7 +84,7 @@ async fn main() {
 
     let password_file_opt = args.value_of("password_file");
     if password_file_opt.is_none() {
-        eprintln!("\nERROR: password-file argument is required\n");
+        eprintln!("\nmain: ERROR: password-file argument is required\n");
         exit(2);
     }
     let password_file = password_file_opt.unwrap();
@@ -94,13 +94,13 @@ async fn main() {
 
     let proxy_ip_opt = args.value_of("proxy_ip");
     if proxy_ip_opt.is_none() {
-        eprintln!("\nERROR: proxy-ip argument is required\n");
+        eprintln!("\nmain: ERROR: proxy-ip argument is required\n");
         exit(2);
     }
 
     let proxy_ip = proxy_ip_opt.unwrap();
     if !is_private_ip(proxy_ip.to_string()) {
-        eprintln!("\nERROR: proxy IP must be a private IP address: {}\n", proxy_ip);
+        eprintln!("\nmain: ERROR: proxy IP must be a private IP address: {}\n", proxy_ip);
         exit(2);
     }
     let mut proxy_bind_addr = None;
@@ -115,7 +115,7 @@ async fn main() {
         }
     }
     if proxy_bind_addr.is_none() {
-        eprintln!("\nERROR: Could not find IP for binding: {}\n", proxy_ip);
+        eprintln!("\nmain: ERROR: Could not find IP for binding: {}\n", proxy_ip);
         exit(2);
     }
 

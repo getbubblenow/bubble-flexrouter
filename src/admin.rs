@@ -52,7 +52,7 @@ pub async fn start_admin (admin_port : u16,
     let routes = warp::post().and(register);
 
     let admin_server = warp::serve(routes).run(admin_sock);
-    eprintln!("Admin listening on {}", admin_sock);
+    eprintln!("start_admin: INFO: Admin listening on {}", admin_sock);
     admin_server.await;
 }
 
@@ -64,7 +64,7 @@ async fn handle_register(registration : AdminRegistration,
                          hashed_password : String) -> Result<impl warp::Reply, warp::Rejection> {
     let pass_result = is_correct_password(registration.password, hashed_password);
     if pass_result.is_err() {
-        eprintln!("handle_register: error verifying password: {:?}", pass_result.err());
+        eprintln!("handle_register: ERROR: error verifying password: {:?}", pass_result.err());
         Ok(warp::reply::with_status(
             "error verifying password",
             http::StatusCode::UNAUTHORIZED,
@@ -93,7 +93,7 @@ async fn handle_register(registration : AdminRegistration,
         // PUT it and see if it worked
         let client = reqwest::Client::new();
         let url = format!("https://{}/api/me/flexRouters", registration.bubble);
-        println!("handle_register: registering ourself with {}, sending: {:?}", url, bubble_registration);
+        println!("handle_register: INFO registering ourself with {}, sending: {:?}", url, bubble_registration);
         match client.put(url.as_str())
             .header(HEADER_BUBBLE_SESSION, registration.session)
             .json(&bubble_registration)
@@ -101,14 +101,14 @@ async fn handle_register(registration : AdminRegistration,
             Ok(response) => {
                 match response.status() {
                     ReqwestStatusCode::OK => {
-                        eprintln!("successfully registered with bubble");
+                        eprintln!("handle_register: INFO successfully registered with bubble");
                         Ok(warp::reply::with_status(
                             "successfully registered with bubble",
                             http::StatusCode::OK,
                         ))
                     },
                     _ => {
-                        eprintln!("error registering with bubble: {:?}", response.status());
+                        eprintln!("handle_register: ERROR: error registering with bubble: {:?}", response.status());
                         Ok(warp::reply::with_status(
                             "error registering with bubble",
                             http::StatusCode::PRECONDITION_FAILED,
@@ -117,7 +117,7 @@ async fn handle_register(registration : AdminRegistration,
                 }
             },
             Err(error) => {
-                eprintln!("error registering with bubble: {:?}", error);
+                eprintln!("handle_register: ERROR: error registering with bubble: {:?}", error);
                 Ok(warp::reply::with_status(
                     "error registering with bubble",
                     http::StatusCode::PRECONDITION_FAILED,

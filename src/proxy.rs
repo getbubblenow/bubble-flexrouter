@@ -73,9 +73,9 @@ pub async fn start_proxy (dns1_ip : &str,
     });
 
     let server = Server::bind(&addr).serve(make_service);
-    eprintln!("Proxy listening on {}", addr);
+    eprintln!("start_proxy: INFO Proxy listening on {}", addr);
     let result = server.await;
-    eprintln!("Proxy await result: {:?}", result);
+    eprintln!("start_proxy: INFO Proxy await result: {:?}", result);
 }
 
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
@@ -90,7 +90,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     }
     let host = host.unwrap();
     let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
-    eprintln!("proxy: req(host {} resolved to: {}): {:?}", host, ip_string, req);
+    eprintln!("proxy: INFO req(host {} resolved to: {}): {:?}", host, ip_string, req);
 
     if needs_static_route(&ip_string) {
         if !create_static_route(&gateway, &ip_string) {
@@ -160,7 +160,7 @@ async fn tunnel(upgraded: Upgraded, addr: SocketAddr) -> std::io::Result<()> {
     // Print message when done
     match amounts {
         Ok((from_client, from_server)) => {
-            println!("client wrote {} bytes and received {} bytes", from_client, from_server);
+            eprintln!("proxy: DEBUG: client wrote {} bytes and received {} bytes", from_client, from_server);
         }
         Err(e) => {
             eprintln!("proxy: ERROR: tunnel error: {}", e);
