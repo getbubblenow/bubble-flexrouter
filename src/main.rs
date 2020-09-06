@@ -109,6 +109,7 @@ async fn main() {
         .module(module_path!())
         .verbosity(verbosity)
         .quiet(quiet)
+        .timestamp(stderrlog::Timestamp::Millisecond)
         .init().unwrap();
 
     // todo: ensure we are running as root (or Administrator on Windows)
