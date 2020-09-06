@@ -134,7 +134,7 @@ async fn main() {
     // create a random token
     let auth_token = Arc::new(rand::thread_rng()
         .sample_iter(&Alphanumeric)
-        .take(30)
+        .take(50)
         .collect::<String>());
 
     let admin = start_admin(
