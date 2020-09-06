@@ -48,7 +48,6 @@ impl Ping {
             false
         } else {
             let hash = hash_token_with_salt(auth_token, self.time, &self.salt);
-            eprintln!("Ping.verify: INFO: comparing provided hash={} with calculated hash={}", self.hash, hash);
             self.hash.eq(&hash)
         }
     }
@@ -63,7 +62,5 @@ fn hash_token_with_salt(auth_token: Arc<String>, time : u128, salt: &String) -> 
     hasher.update(b":");
     hasher.update(auth_token.to_string());
     let digest = hasher.finalize();
-    let hash = hex::encode(digest);
-    eprintln!("hash_token_with_salt: INFO: salt={} and token={} created hash={}", salt, auth_token.to_string(), hash);
-    hash
+    hex::encode(digest)
 }

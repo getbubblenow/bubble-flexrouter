@@ -97,7 +97,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
             let body_bytes = hyper::body::to_bytes(req.into_body()).await?;
             let body = String::from_utf8(body_bytes.to_vec()).unwrap();
             let ping : Ping = serde_json::from_str(body.as_str()).unwrap();
-            eprintln!("proxy: INFO: received body: {:?}", ping);
+            eprintln!("proxy: DEBUG: received body: {:?}", ping);
             if !ping.verify(auth_token.clone()) {
                 eprintln!("proxy: ERROR: invalid ping hash");
                 bad_request("invalid ping hash")
