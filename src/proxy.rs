@@ -127,10 +127,16 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
         return bad_request("auth not found");
     }
 
-    let auth : Ping = serde_json::from_str(flex_auth.unwrap().to_string().as_str()).unwrap();
-    if !auth.verify(auth_token.clone()) {
-        error!("proxy: invalid auth");
-        return bad_request("invalid auth");
+    let auth_result = serde_json::from_str(flex_auth.unwrap().to_string().as_str());
+    if auth_result.is_err() {
+        error!("proxy: error parsing auth: {:?}", auth_result.err());
+        return bad_request("error parsing auth");
+    } else {
+        let auth: Ping = auth_result.unwrap();
+        if !auth.verify(auth_token.clone()) {
+            error!("proxy: invalid auth");
+            return bad_request("invalid auth");
+        }
     }
 
     let host = host.unwrap();
