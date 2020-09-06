@@ -7,7 +7,6 @@
 extern crate bcrypt;
 extern crate rand;
 
-use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -18,23 +17,15 @@ use bcrypt::{DEFAULT_COST, BcryptResult, hash, verify};
 
 use log::error;
 
+use crate::util::read_required_env_var_argument;
+
 pub fn is_correct_password(given_password : String, hashed_password : String) -> BcryptResult<bool> {
     verify(given_password.trim(), hashed_password.trim())
 }
 
 pub fn init_password (password_file_name : &str, password_opt : Option<&str>) -> String {
     if password_opt.is_some() {
-        let password_env_var = password_opt.unwrap();
-        let password_env_var_result = env::var(password_env_var);
-        if password_env_var_result.is_err() {
-            error!("password-env-var argument was {} but that environment variable was not defined\n", password_env_var);
-            exit(3);
-        }
-        let password_val = password_env_var_result.unwrap();
-        if password_val.trim().len() == 0 {
-            error!("password-env-var argument was {} but the value of that environment variable was empty\n", password_env_var);
-            exit(3);
-        }
+        let password_val = read_required_env_var_argument("password-env-var", password_opt);
         let password_path = Path::new(password_file_name);
 
         let password_file_result = File::create(password_path);

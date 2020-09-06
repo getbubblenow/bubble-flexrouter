@@ -20,13 +20,13 @@ use sha2::{Sha256, Digest};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Ping {
-    time : u128,
+    time : u64,
     salt : String,
     hash : String
 }
 
-const MAX_PING_AGE: i64 = 30000;
-const MIN_PING_AGE: i64 = -5000;
+const MAX_PING_AGE: i128 = 30000;
+const MIN_PING_AGE: i128 = -5000;
 
 impl Ping {
     pub fn new (auth_token : Arc<String>) -> Ping {
@@ -34,14 +34,14 @@ impl Ping {
             .sample_iter(&Alphanumeric)
             .take(50)
             .collect::<String>();
-        let time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+        let time = now();
         let hash = hash_token_with_salt(auth_token, time, &salt);
         Ping { time, salt, hash }
     }
 
     pub fn verify(&self, auth_token : Arc<String>) -> bool {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-        let age : i64 = (now - self.time) as i64;
+        let now = now();
+        let age : i128 = now as i128 - self.time as i128;
         return if age > MAX_PING_AGE {
             warn!("Ping.verify: ping was too old, returning false");
             false
@@ -61,7 +61,11 @@ impl Ping {
 
 }
 
-fn hash_token_with_salt(auth_token: Arc<String>, time : u128, salt: &String) -> String {
+fn now () -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64
+}
+
+fn hash_token_with_salt(auth_token: Arc<String>, time : u64, salt: &String) -> String {
     let mut hasher = Sha256::new();
     hasher.update(salt.as_bytes());
     hasher.update(b":");

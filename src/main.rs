@@ -14,6 +14,8 @@ extern crate stderrlog;
 
 extern crate rand;
 
+use std::fs;
+use std::path::Path;
 use std::process::exit;
 use std::sync::Arc;
 
@@ -25,15 +27,16 @@ use log::{info, error};
 
 use pnet::datalink;
 
-use rand::Rng;
-use rand::distributions::Alphanumeric;
-
 use whoami;
 
 use bubble_flexrouter::admin::start_admin;
 use bubble_flexrouter::net::is_private_ip;
 use bubble_flexrouter::pass::init_password;
 use bubble_flexrouter::proxy::start_proxy;
+use bubble_flexrouter::util::read_required_env_var_argument;
+
+const MIN_TOKEN_CHARS: usize = 50;
+const MAX_TOKEN_CHARS: usize = 100;
 
 #[tokio::main]
 async fn main() {
@@ -78,14 +81,22 @@ async fn main() {
         .arg(Arg::with_name("password_file")
             .short("w")
             .long("password-file")
-            .value_name("FILE")
-            .help("file containing bcrypt-hashed password required for admin commands")
+            .value_name("ENV_VAR_NAME")
+            .help("environment variable naming the file that contains bcrypt-hashed password required for admin commands")
+            .default_value("BUBBLE_FR_PASS")
             .takes_value(true))
         .arg(Arg::with_name("password_env_var")
             .short("W")
             .long("password-env-var")
             .value_name("ENV_VAR_NAME")
             .help("environment variable containing the admin password. overwrites previous value")
+            .takes_value(true))
+        .arg(Arg::with_name("token_file")
+            .short("t")
+            .long("token-file")
+            .value_name("ENV_VAR_NAME")
+            .help("environment variable naming the file that contains the bubble token")
+            .default_value("BUBBLE_FR_TOKEN")
             .takes_value(true))
         .arg(Arg::with_name("log_level")
             .short("v")
@@ -115,15 +126,11 @@ async fn main() {
     // todo: ensure we are running as root (or Administrator on Windows)
     info!("The ID of the current user is {}", whoami::username());
 
-    let password_file_opt = args.value_of("password_file");
-    if password_file_opt.is_none() {
-        error!("main: password-file argument is required");
-        exit(2);
-    }
-    let password_file = password_file_opt.unwrap();
+    let password_file_env_var_opt = args.value_of("password_file");
+    let password_file = read_required_env_var_argument("password-file", password_file_env_var_opt);
 
     let password_opt = args.value_of("password_env_var");
-    let password_hash = init_password(password_file, password_opt);
+    let password_hash = init_password(password_file.as_str(), password_opt);
 
     let proxy_ip_opt = args.value_of("proxy_ip");
     if proxy_ip_opt.is_none() {
@@ -158,11 +165,36 @@ async fn main() {
     let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
     let proxy_ip = proxy_bind_addr.unwrap().ip();
 
-    // create a random token
-    let auth_token = Arc::new(rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(50)
-        .collect::<String>());
+    let token_file_env_var_opt = args.value_of("token_file");
+    let token_path_string = read_required_env_var_argument("token-file", token_file_env_var_opt);
+    let token_path = token_path_string.as_str();
+    let token_file_path = Path::new(token_path);
+    if !token_file_path.exists() {
+        error!("main: token file does not exist: {}", token_path);
+        exit(2);
+    }
+
+    let auth_token_result = fs::read_to_string(&token_file_path);
+    if auth_token_result.is_err() {
+        let err = auth_token_result.err();
+        if err.is_none() {
+            error!("main: error reading token file {}", token_path);
+        } else {
+            error!("main: error reading token file {}: {:?}", token_path, err.unwrap());
+        }
+        exit(2);
+    }
+    let auth_token_string = auth_token_result.unwrap();
+    let auth_token_val = auth_token_string.trim();
+    if auth_token_val.len() < MIN_TOKEN_CHARS {
+        error!("main: auth token in token file {} is too short, must be at least {} chars", token_path, MIN_TOKEN_CHARS);
+        exit(2);
+    }
+    if auth_token_val.len() > MAX_TOKEN_CHARS {
+        error!("main: auth token in token file {} is too long, must be at most {} chars", token_path, MAX_TOKEN_CHARS);
+        exit(2);
+    }
+    let auth_token = Arc::new(String::from(auth_token_val));
 
     let admin = start_admin(
         admin_port,
