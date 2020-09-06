@@ -4,12 +4,8 @@
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
  */
 
-extern crate rand;
-
 use std::net::SocketAddr;
-
-use rand::Rng;
-use rand::distributions::Alphanumeric;
+use std::sync::Arc;
 
 use reqwest;
 use reqwest::StatusCode as ReqwestStatusCode;
@@ -38,7 +34,8 @@ struct BubbleRegistration {
 pub async fn start_admin (admin_port : u16,
                           proxy_ip : String,
                           proxy_port : u16,
-                          hashed_password : String) {
+                          password_hash: String,
+                          auth_token : Arc<String>) {
     let admin_sock: SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
 
     let register = warp::path!("register")
@@ -46,7 +43,8 @@ pub async fn start_admin (admin_port : u16,
         .and(warp::body::json())
         .and(warp::any().map(move || proxy_ip.clone()))
         .and(warp::any().map(move || proxy_port))
-        .and(warp::any().map(move || hashed_password.clone()))
+        .and(warp::any().map(move || password_hash.clone()))
+        .and(warp::any().map(move || auth_token.clone()))
         .and_then(handle_register);
 
     let routes = warp::post().and(register);
@@ -61,7 +59,8 @@ const HEADER_BUBBLE_SESSION: &'static str = "X-Bubble-Session";
 async fn handle_register(registration : AdminRegistration,
                          proxy_ip: String,
                          proxy_port : u16,
-                         hashed_password : String) -> Result<impl warp::Reply, warp::Rejection> {
+                         hashed_password : String,
+                         auth_token : Arc<String>) -> Result<impl warp::Reply, warp::Rejection> {
     let pass_result = is_correct_password(registration.password, hashed_password);
     if pass_result.is_err() {
         eprintln!("handle_register: ERROR: error verifying password: {:?}", pass_result.err());
@@ -77,17 +76,11 @@ async fn handle_register(registration : AdminRegistration,
     } else {
         // try to register with bubble
 
-        // create a random token
-        let token = rand::thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(10)
-            .collect::<String>();
-
         // create the registration object
         let bubble_registration = BubbleRegistration {
             ip: proxy_ip,
             proxy_port,
-            auth_token: token
+            auth_token: auth_token.to_string()
         };
 
         // PUT it and see if it worked

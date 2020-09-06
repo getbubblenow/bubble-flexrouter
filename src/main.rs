@@ -10,13 +10,19 @@
  * License: https://raw.githubusercontent.com/hyperium/hyper/master/LICENSE
  */
 
+extern crate rand;
+
 use std::process::exit;
+use std::sync::Arc;
 
 use clap::{Arg, ArgMatches, App};
 
 use futures_util::future::join;
 
 use pnet::datalink;
+
+use rand::Rng;
+use rand::distributions::Alphanumeric;
 
 use whoami;
 
@@ -125,7 +131,25 @@ async fn main() {
     let proxy_port = args.value_of("proxy_port").unwrap().parse::<u16>().unwrap();
     let proxy_ip = proxy_bind_addr.unwrap().ip();
 
-    let admin = start_admin(admin_port, proxy_ip.to_string(), proxy_port, password_hash);
-    let proxy = start_proxy(dns1_ip, dns2_ip, proxy_ip, proxy_port);
+    // create a random token
+    let auth_token = Arc::new(rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(30)
+        .collect::<String>());
+
+    let admin = start_admin(
+        admin_port,
+        proxy_ip.to_string(),
+        proxy_port,
+        password_hash,
+        auth_token.clone()
+    );
+    let proxy = start_proxy(
+        dns1_ip,
+        dns2_ip,
+        proxy_ip,
+        proxy_port,
+        auth_token.clone()
+    );
     join(admin, proxy).await;
 }

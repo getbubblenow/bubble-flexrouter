@@ -34,13 +34,15 @@ use trust_dns_resolver::TokioAsyncResolver;
 use crate::dns_cache::*;
 use crate::net::*;
 use crate::hyper_util::bad_request;
+use crate::ping::Ping;
 
 type HttpClient = Client<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>;
 
 pub async fn start_proxy (dns1_ip : &str,
                           dns2_ip: &str,
                           proxy_ip: IpAddr,
-                          proxy_port: u16) {
+                          proxy_port: u16,
+                          auth_token : Arc<String>) {
     let dns1_sock : SocketAddr = format!("{}:53", dns1_ip).parse().unwrap();
     let dns2_sock : SocketAddr = format!("{}:53", dns2_ip).parse().unwrap();
 
@@ -60,6 +62,7 @@ pub async fn start_proxy (dns1_ip : &str,
         let gateway = gateway.clone();
         let resolver = resolver.clone();
         let resolver_cache = resolver_cache.clone();
+        let auth_token = auth_token.clone();
         async move {
             Ok::<_, Infallible>(service_fn(
                 move |req| proxy(
@@ -67,6 +70,7 @@ pub async fn start_proxy (dns1_ip : &str,
                     gateway.clone(),
                     resolver.clone(),
                     resolver_cache.clone(),
+                    auth_token.clone(),
                     req)
             ))
         }
@@ -82,11 +86,28 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                gateway: Arc<String>,
                resolver: Arc<TokioAsyncResolver>,
                resolver_cache: Arc<Mutex<LruCache<String, String>>>,
+               auth_token : Arc<String>,
                req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
-    let host = req.uri().host();
+    let uri = req.uri();
+    let host = uri.host();
     if host.is_none() {
-        eprintln!("proxy: ERROR: no host, returning 400");
-        return bad_request("No host!");
+        return if uri.path().eq("/ping") && req.method() == Method::POST {
+            let body_bytes = hyper::body::to_bytes(req.into_body()).await?;
+            let body = String::from_utf8(body_bytes.to_vec()).unwrap();
+            let ping : Ping = serde_json::from_str(body.as_str()).unwrap();
+            eprintln!("proxy: INFO: received body: {:?}", ping);
+            if !ping.verify(auth_token.clone()) {
+                eprintln!("proxy: INFO: ping hash not valid");
+                bad_request("ping hash not valid")
+            } else {
+                let pong = Ping::new(auth_token.clone());
+                let pong_json = serde_json::to_string(&pong).unwrap();
+                Ok(Response::new(Body::from(pong_json)))
+            }
+        } else {
+            eprintln!("proxy: ERROR: no host");
+            bad_request("No host!")
+        }
     }
     let host = host.unwrap();
     let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
@@ -113,7 +134,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
         // Note: only after client received an empty body with STATUS_OK can the
         // connection be upgraded, so we can't return a response inside
         // `on_upgrade` future.
-        if let Some(addr) = host_addr(req.uri(), &ip_string) {
+        if let Some(addr) = host_addr(uri, &ip_string) {
             tokio::task::spawn(async move {
                 match req.into_body().on_upgrade().await {
                     Ok(upgraded) => {
@@ -127,11 +148,11 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
 
             Ok(Response::new(Body::empty()))
         } else {
-            eprintln!("proxy: ERROR: CONNECT host is not socket addr: {:?}", req.uri());
+            eprintln!("proxy: ERROR: CONNECT host is not socket addr: {:?}", uri);
             return bad_request("CONNECT must be to a socket address");
         }
     } else {
-        // ensure client resolves hostname to the same IP we resolved
+        // client will resolves hostname to the same IP we resolved, using the CacheResolver
         client.request(req).await
     }
 }
