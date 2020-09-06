@@ -4,6 +4,12 @@
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
  */
 
+/**
+ * This code was adapted from https://github.com/hyperium/hyper/blob/master/examples/http_proxy.rs
+ * Copyright (c) 2014-2018 Sean McArthur
+ * License: https://raw.githubusercontent.com/hyperium/hyper/master/LICENSE
+ */
+
 use std::process::exit;
 
 use clap::{Arg, ArgMatches, App};
