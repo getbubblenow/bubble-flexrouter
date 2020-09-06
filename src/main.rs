@@ -9,6 +9,8 @@
  * Copyright (c) 2014-2018 Sean McArthur
  * License: https://raw.githubusercontent.com/hyperium/hyper/master/LICENSE
  */
+extern crate log;
+extern crate stderrlog;
 
 extern crate rand;
 
@@ -18,6 +20,8 @@ use std::sync::Arc;
 use clap::{Arg, ArgMatches, App};
 
 use futures_util::future::join;
+
+use log::{info, error};
 
 use pnet::datalink;
 
@@ -83,14 +87,38 @@ async fn main() {
             .value_name("ENV_VAR_NAME")
             .help("environment variable containing the admin password. overwrites previous value")
             .takes_value(true))
+        .arg(Arg::with_name("log_level")
+            .short("v")
+            .long("log-level")
+            .value_name("LOG_LEVEL")
+            .help("set the log level: off, error, warn, info, debug, trace")
+            .default_value("warn")
+            .takes_value(true))
         .get_matches();
 
+    let (verbosity, quiet) = match args.value_of("log_level").unwrap().to_ascii_lowercase().as_str() {
+        "off"   => (0, true),
+        "error" => (0, false),
+        "warn"  => (1, false),
+        "info"  => (2, false),
+        "debug" => (3, false),
+        "trace" => (4, false),
+        _ => (2, false)
+    };
+    stderrlog::new()
+        .module(module_path!())
+        .verbosity(verbosity)
+        .quiet(quiet)
+        .init().unwrap();
+
+    let max_level = log::max_level();
+
     // todo: ensure we are running as root (or Administrator on Windows)
-    println!("\nThe ID of the current user is {}\n", whoami::username());
+    info!("The ID of the current user is {} and log level is {:?}", whoami::username(), max_level);
 
     let password_file_opt = args.value_of("password_file");
     if password_file_opt.is_none() {
-        eprintln!("\nmain: ERROR: password-file argument is required\n");
+        error!("main: password-file argument is required");
         exit(2);
     }
     let password_file = password_file_opt.unwrap();
@@ -100,13 +128,13 @@ async fn main() {
 
     let proxy_ip_opt = args.value_of("proxy_ip");
     if proxy_ip_opt.is_none() {
-        eprintln!("\nmain: ERROR: proxy-ip argument is required\n");
+        error!("main: proxy-ip argument is required");
         exit(2);
     }
 
     let proxy_ip = proxy_ip_opt.unwrap();
     if !is_private_ip(proxy_ip.to_string()) {
-        eprintln!("\nmain: ERROR: proxy IP must be a private IP address: {}\n", proxy_ip);
+        error!("main: proxy IP must be a private IP address: {}", proxy_ip);
         exit(2);
     }
     let mut proxy_bind_addr = None;
@@ -121,7 +149,7 @@ async fn main() {
         }
     }
     if proxy_bind_addr.is_none() {
-        eprintln!("\nmain: ERROR: Could not find IP for binding: {}\n", proxy_ip);
+        error!("main: Could not find IP for binding: {}", proxy_ip);
         exit(2);
     }
 

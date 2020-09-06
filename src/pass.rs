@@ -16,6 +16,8 @@ use std::process::exit;
 
 use bcrypt::{DEFAULT_COST, BcryptResult, hash, verify};
 
+use log::error;
+
 pub fn is_correct_password(given_password : String, hashed_password : String) -> BcryptResult<bool> {
     verify(given_password.trim(), hashed_password.trim())
 }
@@ -25,12 +27,12 @@ pub fn init_password (password_file_name : &str, password_opt : Option<&str>) ->
         let password_env_var = password_opt.unwrap();
         let password_env_var_result = env::var(password_env_var);
         if password_env_var_result.is_err() {
-            eprintln!("\nERROR: password-env-var argument was {} but that environment variable was not defined\n", password_env_var);
+            error!("password-env-var argument was {} but that environment variable was not defined\n", password_env_var);
             exit(3);
         }
         let password_val = password_env_var_result.unwrap();
         if password_val.trim().len() == 0 {
-            eprintln!("\nERROR: password-env-var argument was {} but the value of that environment variable was empty\n", password_env_var);
+            error!("password-env-var argument was {} but the value of that environment variable was empty\n", password_env_var);
             exit(3);
         }
         let password_path = Path::new(password_file_name);
@@ -39,9 +41,9 @@ pub fn init_password (password_file_name : &str, password_opt : Option<&str>) ->
         if password_file_result.is_err() {
             let err = password_file_result.err();
             if err.is_none() {
-                eprintln!("\nERROR: unknown error writing to password file {}\n", password_file_name);
+                error!("unknown error writing to password file {}\n", password_file_name);
             } else {
-                eprintln!("\nERROR: error writing to password file {}: {:?}\n", password_file_name, err);
+                error!("error writing to password file {}: {:?}\n", password_file_name, err);
             }
             exit(3);
         }
@@ -51,9 +53,9 @@ pub fn init_password (password_file_name : &str, password_opt : Option<&str>) ->
         if bcrypt_result.is_err() {
             let err = bcrypt_result.err();
             if err.is_none() {
-                eprintln!("\nERROR: unknown error encrypting password\n");
+                error!("unknown error encrypting password\n");
             } else {
-                eprintln!("\nERROR: error encrypting password: {:?}\n", err.unwrap());
+                error!("error encrypting password: {:?}\n", err.unwrap());
             }
             exit(3);
         }
@@ -62,9 +64,9 @@ pub fn init_password (password_file_name : &str, password_opt : Option<&str>) ->
         if write_result.is_err() {
             let err = write_result.err();
             if err.is_none() {
-                eprintln!("\nERROR: unknown error writing password file {}\n", password_file_name);
+                error!("unknown error writing password file {}\n", password_file_name);
             } else {
-                eprintln!("\nERROR: error writing password file {}: {:?}\n", password_file_name, err.unwrap());
+                error!("error writing password file {}: {:?}\n", password_file_name, err.unwrap());
             }
             exit(3);
         }
@@ -74,9 +76,9 @@ pub fn init_password (password_file_name : &str, password_opt : Option<&str>) ->
     if result.is_err() {
         let err = result.err();
         if err.is_none() {
-            eprintln!("\nERROR: unknown error reading password file {}\n", password_file_name);
+            error!("unknown error reading password file {}\n", password_file_name);
         } else {
-            eprintln!("\nERROR: error reading password file {}: {:?}\n", password_file_name, err.unwrap());
+            error!("error reading password file {}: {:?}\n", password_file_name, err.unwrap());
         }
         exit(3);
     }

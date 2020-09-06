@@ -13,6 +13,8 @@ use std::task::{self, Poll};
 
 use hyper::client::connect::dns::Name;
 
+use log::debug;
+
 use lru::LruCache;
 
 use tower::Service;
@@ -57,13 +59,13 @@ pub async fn resolve_with_cache(host: &str,
     let found = (*guard).get(&host_string);
 
     if found.is_none() {
-        println!("resolve_with_cache: host={} not in cache, resolving...", host_string);
+        debug!("resolve_with_cache: host={} not in cache, resolving...", host_string);
         let resolved_ip = format!("{}", resolver.lookup_ip(host).await.unwrap().iter().next().unwrap());
         (*guard).put(host_string, resolved_ip.to_string());
         resolved_ip
     } else {
         let found = found.unwrap();
-        println!("resolve_with_cache: host={} found in cache, returning: {}", host_string, found);
+        debug!("resolve_with_cache: host={} found in cache, returning: {}", host_string, found);
         String::from(found)
     }
 }
@@ -111,7 +113,7 @@ impl Service<Name> for CacheResolver {
     }
 
     fn call(&mut self, name: Name) -> CacheFuture {
-        println!("+++++++ resolving host={:?}", name.as_str());
+        debug!("CacheResolver.call resolving host={:?}", name.as_str());
         let resolver: Arc<TokioAsyncResolver> = self._resolver.clone();
         let cache: Arc<Mutex<LruCache<String, String>>> = self._cache.clone();
         let addrs = tokio::task::spawn(

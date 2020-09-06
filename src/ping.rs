@@ -9,6 +9,8 @@ extern crate rand;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use log::warn;
+
 use rand::Rng;
 use rand::distributions::Alphanumeric;
 
@@ -41,14 +43,19 @@ impl Ping {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
         let age : i64 = (now - self.time) as i64;
         return if age > MAX_PING_AGE {
-            eprintln!("Ping.verify: ERROR: ping was too old");
+            warn!("Ping.verify: ping was too old, returning false");
             false
         } else if age < MIN_PING_AGE {
-            eprintln!("Ping.verify: ERROR: ping was too young");
+            warn!("Ping.verify: ping was too young, returning false");
             false
         } else {
             let hash = hash_token_with_salt(auth_token, self.time, &self.salt);
-            self.hash.eq(&hash)
+            return if self.hash.ne(&hash) {
+                warn!("Ping.verify: hash was incorrect");
+                false
+            } else {
+                true
+            }
         }
     }
 

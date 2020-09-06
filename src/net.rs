@@ -6,6 +6,8 @@
 
 use std::process::{exit, Command, Stdio};
 
+use log::{debug, info, error};
+
 use whoami::{platform, Platform};
 
 pub fn is_private_ip(ip : String) -> bool {
@@ -65,14 +67,14 @@ pub fn ip_gateway() -> String {
             String::from(String::from_utf8(output).unwrap().trim())
         }
         _ => {
-            eprintln!("ERROR: Unsupported platform: {:?}", platform);
+            error!("ip_gateway: unsupported platform: {:?}", platform);
             exit(2);
         }
     }
 }
 
 pub fn needs_static_route(ip_string: &String) -> bool {
-    println!("needs_static_route: checking ip={:?}", ip_string);
+    debug!("needs_static_route: checking ip={:?}", ip_string);
     let platform: Platform = platform();
     let output = match platform {
         Platform::Windows => {
@@ -99,7 +101,7 @@ pub fn needs_static_route(ip_string: &String) -> bool {
                 .output().unwrap().stdout
         }
         _ => {
-            eprintln!("ERROR: Unsupported platform: {:?}", platform);
+            error!("needs_static_route: unsupported platform: {:?}", platform);
             exit(2);
         }
     };
@@ -110,7 +112,7 @@ pub fn needs_static_route(ip_string: &String) -> bool {
 }
 
 pub fn create_static_route(gateway: &String, ip_string: &String) -> bool {
-    println!("create_static_route: creating: gateway={}, ip={}", gateway, ip_string);
+    info!("create_static_route: creating: gateway={}, ip={}", gateway, ip_string);
     let platform: Platform = platform();
     let output = match platform {
         Platform::Windows => {
@@ -135,7 +137,7 @@ pub fn create_static_route(gateway: &String, ip_string: &String) -> bool {
                 .output().unwrap().stderr
         }
         _ => {
-            eprintln!("ERROR: Unsupported platform: {:?}", platform);
+            error!("create_static_route: unsupported platform: {:?}", platform);
             exit(2);
         }
     };
@@ -144,13 +146,13 @@ pub fn create_static_route(gateway: &String, ip_string: &String) -> bool {
     let first_part = parts.next();
     let ok = first_part.is_none() || first_part.unwrap().len() == 0;
     if !ok {
-        println!("create_static_route: error creating route to {}: {}", ip_string, data);
+        error!("create_static_route: error creating route to {}: {}", ip_string, data);
     }
     ok
 }
 
 pub fn remove_static_route(ip_string: &String) -> bool {
-    println!("remove_static_route: removing ip={}", ip_string);
+    info!("remove_static_route: removing ip={}", ip_string);
     let platform: Platform = platform();
     let output = match platform {
         Platform::Windows => {
@@ -174,7 +176,7 @@ pub fn remove_static_route(ip_string: &String) -> bool {
                 .output().unwrap().stderr
         }
         _ => {
-            eprintln!("ERROR: Unsupported platform: {:?}", platform);
+            error!("remove_static_route: unsupported platform: {:?}", platform);
             exit(2);
         }
     };
@@ -183,7 +185,7 @@ pub fn remove_static_route(ip_string: &String) -> bool {
     let first_part = parts.next();
     let ok = first_part.is_none() || first_part.unwrap().len() == 0;
     if !ok {
-        eprintln!("ERROR: remove_static_route: error removing route to {}: {}", ip_string, data);
+        error!("remove_static_route: error removing route to {}: {}", ip_string, data);
     }
     ok
 }

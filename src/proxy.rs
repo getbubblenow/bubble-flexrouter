@@ -24,6 +24,8 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::upgrade::Upgraded;
 use hyper_tls::HttpsConnector;
 
+use log::{debug, info, error, trace};
+
 use lru::LruCache;
 
 use tokio::net::TcpStream;
@@ -77,9 +79,9 @@ pub async fn start_proxy (dns1_ip : &str,
     });
 
     let server = Server::bind(&addr).serve(make_service);
-    eprintln!("start_proxy: INFO Proxy listening on {}", addr);
+    info!("start_proxy: Proxy listening on {}", addr);
     let result = server.await;
-    eprintln!("start_proxy: INFO Proxy await result: {:?}", result);
+    debug!("start_proxy: Proxy await result: {:?}", result);
 }
 
 const HEADER_FLEX_AUTH: &'static str = "X-Bubble-Flex-Auth";
@@ -97,9 +99,9 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
             let body_bytes = hyper::body::to_bytes(req.into_body()).await?;
             let body = String::from_utf8(body_bytes.to_vec()).unwrap();
             let ping : Ping = serde_json::from_str(body.as_str()).unwrap();
-            eprintln!("proxy: DEBUG: received body: {:?}", ping);
+            debug!("proxy: received body: {:?}", ping);
             if !ping.verify(auth_token.clone()) {
-                eprintln!("proxy: ERROR: invalid ping hash");
+                error!("proxy: invalid ping hash");
                 bad_request("invalid ping hash")
             } else {
                 let pong = Ping::new(auth_token.clone());
@@ -107,7 +109,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                 Ok(Response::new(Body::from(pong_json)))
             }
         } else {
-            eprintln!("proxy: ERROR: no host");
+            error!("proxy: no host");
             bad_request("No host")
         }
     }
@@ -115,28 +117,28 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     let headers = req.headers();
     let flex_auth_header = headers.get(HEADER_FLEX_AUTH);
     if flex_auth_header.is_none() {
-        eprintln!("proxy: ERROR: no auth");
+        error!("proxy: no auth");
         return bad_request("No auth");
     }
     let flex_auth = flex_auth_header.unwrap().to_str();
     if flex_auth.is_err() {
-        eprintln!("proxy: ERROR: auth not found");
+        error!("proxy: auth not found");
         return bad_request("auth not found");
     }
 
     let auth : Ping = serde_json::from_str(flex_auth.unwrap().to_string().as_str()).unwrap();
     if !auth.verify(auth_token.clone()) {
-        eprintln!("proxy: ERROR: invalid auth");
+        error!("proxy: invalid auth");
         return bad_request("invalid auth");
     }
 
     let host = host.unwrap();
     let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
-    eprintln!("proxy: INFO req(host {} resolved to: {}): {:?}", host, ip_string, req);
+    info!("proxy: req(host {} resolved to: {}): {:?}", host, ip_string, req);
 
     if needs_static_route(&ip_string) {
         if !create_static_route(&gateway, &ip_string) {
-            eprintln!("proxy: ERROR: error creating static route to {:?}", ip_string);
+            error!("proxy: error creating static route to {:?}", ip_string);
             return bad_request(format!("Error: error creating static route to {:?}", ip_string).as_str());
         }
     }
@@ -160,16 +162,16 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                 match req.into_body().on_upgrade().await {
                     Ok(upgraded) => {
                         if let Err(e) = tunnel(upgraded, addr).await {
-                            eprintln!("proxy: ERROR: server io error: {}", e);
+                            error!("proxy: server io error: {}", e);
                         };
                     }
-                    Err(e) => eprintln!("proxy: ERROR: upgrade error: {}", e),
+                    Err(e) => error!("proxy: upgrade error: {}", e),
                 }
             });
 
             Ok(Response::new(Body::empty()))
         } else {
-            eprintln!("proxy: ERROR: CONNECT host is not socket addr: {:?}", uri);
+            error!("proxy: CONNECT host is not socket addr: {:?}", uri);
             return bad_request("CONNECT must be to a socket address");
         }
     } else {
@@ -202,10 +204,10 @@ async fn tunnel(upgraded: Upgraded, addr: SocketAddr) -> std::io::Result<()> {
     // Print message when done
     match amounts {
         Ok((from_client, from_server)) => {
-            eprintln!("proxy: DEBUG: client wrote {} bytes and received {} bytes", from_client, from_server);
+            trace!("proxy: client wrote {} bytes and received {} bytes", from_client, from_server);
         }
         Err(e) => {
-            eprintln!("proxy: ERROR: tunnel error: {}", e);
+            error!("proxy: tunnel error: {}", e);
         }
     };
     Ok(())
