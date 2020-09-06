@@ -111,10 +111,8 @@ async fn main() {
         .quiet(quiet)
         .init().unwrap();
 
-    let max_level = log::max_level();
-
     // todo: ensure we are running as root (or Administrator on Windows)
-    info!("The ID of the current user is {} and log level is {:?}", whoami::username(), max_level);
+    info!("The ID of the current user is {} and log level is {:?}", whoami::username());
 
     let password_file_opt = args.value_of("password_file");
     if password_file_opt.is_none() {
