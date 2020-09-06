@@ -82,6 +82,8 @@ pub async fn start_proxy (dns1_ip : &str,
     eprintln!("start_proxy: INFO Proxy await result: {:?}", result);
 }
 
+const HEADER_FLEX_AUTH: &'static str = "X-Bubble-Flex-Auth";
+
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                gateway: Arc<String>,
                resolver: Arc<TokioAsyncResolver>,
@@ -97,8 +99,8 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
             let ping : Ping = serde_json::from_str(body.as_str()).unwrap();
             eprintln!("proxy: INFO: received body: {:?}", ping);
             if !ping.verify(auth_token.clone()) {
-                eprintln!("proxy: INFO: ping hash not valid");
-                bad_request("ping hash not valid")
+                eprintln!("proxy: ERROR: invalid ping hash");
+                bad_request("invalid ping hash")
             } else {
                 let pong = Ping::new(auth_token.clone());
                 let pong_json = serde_json::to_string(&pong).unwrap();
@@ -106,9 +108,28 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
             }
         } else {
             eprintln!("proxy: ERROR: no host");
-            bad_request("No host!")
+            bad_request("No host")
         }
     }
+
+    let headers = req.headers();
+    let flex_auth_header = headers.get(HEADER_FLEX_AUTH);
+    if flex_auth_header.is_none() {
+        eprintln!("proxy: ERROR: no auth");
+        return bad_request("No auth");
+    }
+    let flex_auth = flex_auth_header.unwrap().to_str();
+    if flex_auth.is_err() {
+        eprintln!("proxy: ERROR: auth not found");
+        return bad_request("auth not found");
+    }
+
+    let auth : Ping = serde_json::from_str(flex_auth.unwrap().to_string().as_str()).unwrap();
+    if !auth.verify(auth_token.clone()) {
+        eprintln!("proxy: ERROR: invalid auth");
+        return bad_request("invalid auth");
+    }
+
     let host = host.unwrap();
     let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
     eprintln!("proxy: INFO req(host {} resolved to: {}): {:?}", host, ip_string, req);
