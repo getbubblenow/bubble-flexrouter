@@ -112,7 +112,7 @@ async fn main() {
         .init().unwrap();
 
     // todo: ensure we are running as root (or Administrator on Windows)
-    info!("The ID of the current user is {} and log level is {:?}", whoami::username());
+    info!("The ID of the current user is {}", whoami::username());
 
     let password_file_opt = args.value_of("password_file");
     if password_file_opt.is_none() {
