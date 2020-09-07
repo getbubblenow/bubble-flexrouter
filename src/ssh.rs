@@ -151,11 +151,14 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
 const CHECK_SSH_START_DELAY : u64 = 10;
 const CHECK_SSH_INTERVAL: u64 = 10;
 const MAX_CHECK_ERRORS_BEFORE_RESTART : u8 = 3;
+const CHECK_SSH_HTTP_TIMEOUT: u64 = 10;
 
 async fn check_ssh (bubble : Arc<String>, ip : Arc<String>, session : Arc<String>) {
     let mut checker = interval_at(Instant::now().checked_add(Duration::new(CHECK_SSH_START_DELAY, 0)).unwrap(), Duration::new(CHECK_SSH_INTERVAL, 0));
     let check_url = format!("https://{}/api/me/flexRouters/{}/status", bubble.clone(), ip.clone());
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(CHECK_SSH_HTTP_TIMEOUT))
+        .build().unwrap();
     let mut error_count : u8 = 0;
     let mut deleted : bool = false;
     let session = session.clone();
