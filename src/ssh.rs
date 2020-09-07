@@ -14,6 +14,7 @@ use futures::future::{abortable, AbortHandle};
 use log::{debug, info, error, trace};
 
 use reqwest;
+use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::StatusCode as ReqwestStatusCode;
 
 use tokio::time::{interval_at, Instant, Duration};
@@ -229,30 +230,56 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                     session : Arc<String>) -> bool {
     let mut checker = interval_at(Instant::now().checked_add(Duration::new(CHECK_SSH_START_DELAY, 0)).unwrap(), Duration::new(CHECK_SSH_INTERVAL, 0));
     let check_url = format!("https://{}/api/me/flexRouters/{}/status", bubble.clone(), ip.clone());
+    let mut headers = HeaderMap::new();
+    headers.insert(HEADER_BUBBLE_SESSION,   HeaderValue::from_str(session.to_string().as_str()).unwrap());
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(CHECK_SSH_HTTP_TIMEOUT))
+        .default_headers(headers)
         .build().unwrap();
     let mut error_count : u8 = 0;
     let mut deleted : bool = false;
-    let session = session.clone();
     let start_time = now_micros();
+
+    let ip;
+    let port;
+    let proxy_port;
+    let session;
+    let bubble;
+    let host_key;
+    let priv_key;
+    let checker_abort_handle;
+    trace!("check_ssh: locking ssh_container to copy values");
+    {
+        let guard = ssh_container.lock().await;
+        {
+            ip = (*guard).ip.clone().unwrap();
+            port = (*guard).port.unwrap().clone();
+            proxy_port = (*guard).proxy_port.unwrap().clone();
+            session = (*guard).session.clone().unwrap();
+            bubble = (*guard).bubble.clone().unwrap();
+            host_key = (*guard).host_key.clone().unwrap();
+            priv_key = (*guard).priv_key.clone().unwrap();
+            checker_abort_handle = (*guard).checker_abort_handle.clone().unwrap();
+        }
+    }
+
     loop {
         checker.tick().await;
 
         trace!("check_ssh: locking ssh_container to examine checker_done_flag");
-        let guard = ssh_container.lock().await;
         {
-            if (*guard).checker_done_flag > start_time {
-                trace!("check_ssh: checker_done_flag activated, returning");
-                return true;
+            let guard = ssh_container.lock().await;
+            {
+                if (*guard).checker_done_flag > start_time {
+                    trace!("check_ssh: checker_done_flag activated, returning");
+                    return true;
+                }
+                trace!("check_ssh: checker_done_flag not activated, continuing");
             }
-            trace!("check_ssh: checker_done_flag not activated, continuing");
         }
 
         trace!("check_ssh: checking status via {}", check_url);
-        let check_result = client.get(check_url.as_str())
-            .header(HEADER_BUBBLE_SESSION, session.to_string())
-            .send().await;
+        let check_result = client.get(check_url.as_str()).send().await;
         match check_result {
             Err(e) => {
                 error!("check_ssh: error checking status via {}: {:?}", check_url, e);
@@ -300,44 +327,18 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
 
                 } else if error_count >= MAX_CHECK_ERRORS_BEFORE_RESTART {
                     info!("check_ssh: tunnel had too many errors, restarting ssh tunnel");
-                    let ip;
-                    let port;
-                    let proxy_port;
-                    let session;
-                    let bubble;
-                    let host_key;
-                    let priv_key;
-                    let checker_abort_handle;
-                    trace!("check_ssh: locking ssh_container to copy values");
-                    {
-                        let guard = ssh_container.lock().await;
-                        {
-                            ip = (*guard).ip.clone();
-                            port = (*guard).port.unwrap().clone();
-                            proxy_port = (*guard).proxy_port.unwrap().clone();
-                            session = (*guard).session.clone();
-                            bubble = (*guard).bubble.clone();
-                            host_key = (*guard).host_key.clone();
-                            priv_key = (*guard).priv_key.clone();
-                            checker_abort_handle = (*guard).checker_abort_handle.clone();
-                        }
-                    }
-                    if ip.is_none() {
-                        error!("check_ssh: ssh_container.ip was empty, bailing out");
-                        return false;
-                    }
-                    trace!("check_ssh: calling stop_ssh");
+                    trace!("check_ssh: calling stop_ssh_retain_checker");
                     stop_ssh_retain_checker(ssh_container.clone()).await;
                     trace!("check_ssh: stop_ssh returned, starting new ssh tunnel");
                     let ssh_result = respawn_ssh(ssh_container.clone(),
-                                                 ip.unwrap(),
+                                                 ip.clone(),
                                                  port,
                                                  proxy_port,
-                                                 bubble.unwrap(),
-                                                 session.unwrap(),
-                                                 host_key.unwrap(),
-                                                 priv_key.unwrap(),
-                                                 checker_abort_handle.unwrap()).await;
+                                                 bubble.clone(),
+                                                 session.clone(),
+                                                 host_key.clone(),
+                                                 priv_key.clone(),
+                                                 checker_abort_handle.clone()).await;
                     if ssh_result.is_err() {
                         let err = ssh_result.err();
                         if err.is_none() {
