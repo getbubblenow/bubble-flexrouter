@@ -1,4 +1,4 @@
-#![deny(warnings)]
+//#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -9,8 +9,13 @@ use std::process::{Command, Stdio, Child};
 use std::io::Error;
 use std::sync::Arc;
 
-use log::{debug, error, trace};
+use futures::future::{abortable, Abortable, AbortHandle};
 
+use log::{debug, info, error, trace};
+
+use reqwest;
+
+use tokio::time::{interval_at, Instant, Duration};
 use tokio::sync::Mutex;
 
 use whoami::{platform, Platform};
@@ -36,12 +41,16 @@ pub fn ssh_command() -> &'static str {
 
 #[derive(Debug)]
 pub struct SshContainer {
-    pub child: Option<Mutex<Child>>
+    pub child: Option<Mutex<Child>>,
+    pub checker: Option<Mutex<AbortHandle>>
 }
 
 impl SshContainer {
     pub fn new () -> SshContainer {
-        SshContainer { child: None }
+        SshContainer {
+            child: None,
+            checker: None
+        }
     }
 }
 
@@ -96,6 +105,16 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
             if result.is_ok() {
                 child = result.unwrap();
                 (*guard).child = Some(Mutex::new(child));
+                let task = tokio::spawn(async {
+                    let mut checker = interval_at(Instant::now().checked_add(Duration::new(10, 0)).unwrap(), Duration::new(10, 0));
+                    loop {
+                        checker.tick().await;
+                        // let ok = reqwest::get("http://example.com/").await;
+                        info!(">>> checker runs!");
+                    }
+                });
+                let (fut, abort_handle) = abortable(task);
+                (*guard).checker = Some(Mutex::new(abort_handle));
                 Ok(ssh_container.clone())
             } else {
                 let err = result.err();
@@ -128,6 +147,15 @@ pub fn host_file() -> &'static str {
 
 pub async fn stop_ssh (ssh_container : Arc<Mutex<SshContainer>>) {
     let mut guard = ssh_container.lock().await;
+    if (*guard).checker.is_some() {
+        {
+            trace!("stop_ssh: aborting checker");
+            let mut checker_guard = (*guard).checker.as_mut().unwrap().lock().await;
+            checker_guard.abort();
+            trace!("stop_ssh: aborted checker");
+        }
+        (*guard).checker = None;
+    }
     if (*guard).child.is_some() {
         {
             let mut child_guard = (*guard).child.as_mut().unwrap().lock().await;
