@@ -1,4 +1,4 @@
-#![deny(warnings)]
+//#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -22,6 +22,7 @@ use warp::{Filter};
 use crate::pass::is_correct_password;
 use crate::ssh::{spawn_ssh, stop_ssh, SshContainer};
 use crate::net::is_valid_ip;
+use crate::util::HEADER_BUBBLE_SESSION;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AdminRegistration {
@@ -55,6 +56,26 @@ struct BubbleRegistration {
     key: String,
     ip: String,
     auth_token: String
+}
+
+struct BubbleInternalRegistration {
+    key: String,
+    ip: Arc<String>,
+    bubble: Arc<String>,
+    session: Arc<String>,
+    auth_token: String
+}
+
+impl BubbleInternalRegistration {
+    pub fn new(reg : &BubbleRegistration, bubble : String, session : String) -> BubbleInternalRegistration {
+        BubbleInternalRegistration {
+            key: reg.key.clone(),
+            ip: Arc::new(reg.ip.clone()),
+            bubble: Arc::new(bubble.clone()),
+            session: Arc::new(session.clone()),
+            auth_token: reg.auth_token.clone()
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -91,8 +112,6 @@ pub async fn start_admin (admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
     info!("start_admin: Admin listening on {}", admin_sock);
     admin_server.await;
 }
-
-const HEADER_BUBBLE_SESSION: &'static str = "X-Bubble-Session";
 
 async fn handle_register(registration : AdminRegistration,
                          admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
@@ -149,13 +168,15 @@ async fn handle_register(registration : AdminRegistration,
             };
             (*guard) = Some(registration);
         }
+        let internal_reg = BubbleInternalRegistration::new(&bubble_registration, validated.bubble, validated.session);
 
         // PUT it and see if it worked
         let client = reqwest::Client::new();
-        let url = format!("https://{}/api/me/flexRouters", validated.bubble);
+        let url = format!("https://{}/api/me/flexRouters", internal_reg.bubble.clone());
         debug!("handle_register registering ourself with {}, sending: {:?}", url, bubble_registration);
+        let session = internal_reg.session.clone();
         match client.put(url.as_str())
-            .header(HEADER_BUBBLE_SESSION, validated.session)
+            .header(HEADER_BUBBLE_SESSION, session.to_string())
             .json(&bubble_registration)
             .send().await {
             Ok(response) => {
@@ -176,9 +197,11 @@ async fn handle_register(registration : AdminRegistration,
                             info!("handle_register: parsed response object: {:?}", reg_response);
                             let ssh_result = spawn_ssh(
                                 ssh_container.clone(),
+                                internal_reg.ip.clone(),
                                 reg_response.port,
                                 proxy_port,
-                                validated.bubble,
+                                internal_reg.bubble.clone(),
+                                internal_reg.session.clone(),
                                 reg_response.host_key,
                                 ssh_priv_key).await;
                             if ssh_result.is_err() {

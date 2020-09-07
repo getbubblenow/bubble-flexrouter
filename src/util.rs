@@ -14,6 +14,8 @@ use std::process::exit;
 
 use log::error;
 
+pub const HEADER_BUBBLE_SESSION: &'static str = "X-Bubble-Session";
+
 pub fn read_required_env_var_argument(arg_name : &str, opt : Option<&str>) -> String {
     if opt.is_none() {
         error!("read_required_env_var_argument: {} argument is required", arg_name);
