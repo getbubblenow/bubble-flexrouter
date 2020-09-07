@@ -36,7 +36,7 @@ pub fn ssh_command() -> &'static str {
 
 #[derive(Debug)]
 pub struct SshContainer {
-    pub child: Option<Child>
+    pub child: Option<Mutex<Child>>
 }
 
 impl SshContainer {
@@ -75,6 +75,7 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
             }
         } else {
             let user_known_hosts = format!("UserKnownHostsFile={}", host_file);
+            let server_keepalive = format!("ServerAliveInterval=10");
 
             let result = Command::new(ssh_command())
                 .stdin(Stdio::null())
@@ -84,6 +85,8 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                 .arg(priv_key.as_str())
                 .arg("-o")
                 .arg(user_known_hosts)
+                .arg("-o")
+                .arg(server_keepalive)
                 .arg("-Nn")
                 .arg("-R")
                 .arg(tunnel)
@@ -92,7 +95,7 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
             let child;
             if result.is_ok() {
                 child = result.unwrap();
-                (*guard).child = Some(child);
+                (*guard).child = Some(Mutex::new(child));
                 Ok(ssh_container.clone())
             } else {
                 let err = result.err();
@@ -120,5 +123,24 @@ pub fn host_file() -> &'static str {
             error!("host_file: unsupported platform: {:?}", platform);
             exit(2);
         }
+    }
+}
+
+pub async fn stop_ssh (ssh_container : Arc<Mutex<SshContainer>>) {
+    let mut guard = ssh_container.lock().await;
+    if (*guard).child.is_some() {
+        {
+            let mut child_guard = (*guard).child.as_mut().unwrap().lock().await;
+            let kill_result = (*child_guard).kill();
+            if kill_result.is_err() {
+                let err = kill_result.err();
+                if err.is_some() {
+                    error!("stop_ssh: error killing process: {:?}", err.unwrap());
+                } else {
+                    error!("stop_ssh: error killing process");
+                }
+            }
+        }
+        (*guard).child = None;
     }
 }

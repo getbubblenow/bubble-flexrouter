@@ -8,9 +8,34 @@ use std::process::{exit, Command, Stdio};
 
 use log::{debug, info, error};
 
+use pnet::datalink;
+
 use whoami::{platform, Platform};
 
-pub fn is_private_ip(ip : String) -> bool {
+pub fn is_valid_ip(ip : &String) -> bool {
+    if !is_private_ip(ip) {
+        error!("is_valid_ip: not a private IP address: {}", ip);
+        false
+    } else {
+        let mut addr = None;
+        for iface in datalink::interfaces() {
+            if iface.is_loopback() { continue; }
+            if !iface.is_up() { continue; }
+            for net_ip in iface.ips {
+                if net_ip.ip().to_string().eq(ip) {
+                    addr = Some(net_ip);
+                }
+                break;
+            }
+        }
+        if addr.is_none() {
+            error!("is_valid_ip: IP address not found among network interfaces: {}", ip);
+        }
+        addr.is_some()
+    }
+}
+
+pub fn is_private_ip(ip : &String) -> bool {
     return ip.starts_with("10.")
         || ip.starts_with("192.168.")
         || ip.starts_with("172.16.")

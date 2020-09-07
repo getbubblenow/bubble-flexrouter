@@ -95,10 +95,12 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     let uri = req.uri();
     let host = uri.host();
     if host.is_none() {
-        return if uri.path().eq("/ping") && req.method() == Method::POST {
+        let path = uri.path();
+        let method = req.method();
+        return if path.eq("/ping") && method == Method::POST {
             let body_bytes = hyper::body::to_bytes(req.into_body()).await?;
             let body = String::from_utf8(body_bytes.to_vec()).unwrap();
-            let ping : Ping = serde_json::from_str(body.as_str()).unwrap();
+            let ping: Ping = serde_json::from_str(body.as_str()).unwrap();
             trace!("proxy: ping received: {:?}", ping);
             if !ping.verify(auth_token.clone()) {
                 error!("proxy: invalid ping hash");
@@ -109,6 +111,9 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                 trace!("proxy: valid ping, responding with pong: {}", pong_json);
                 Ok(Response::new(Body::from(pong_json)))
             }
+        } else if path.eq("/health") && method == Method::GET {
+            Ok(Response::new(Body::from("proxy is alive")))
+
         } else {
             error!("proxy: no host");
             bad_request("No host")
