@@ -82,7 +82,6 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                         priv_key : Arc<String>) -> Result<bool, Option<Error>> {
     let mut guard = ssh_container.lock().await;
     if (*guard).child.is_some() {
-        // todo: verify that child is still running
         info!("spawn_ssh: ssh tunnel exists, not respawning");
         Ok(true)
     } else {
@@ -148,7 +147,6 @@ pub async fn respawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                           checker_abort_handler : Arc<Mutex<AbortHandle>>) -> Result<bool, Option<Error>> {
     let mut guard = ssh_container.lock().await;
     if (*guard).child.is_some() {
-        // todo: verify that child is still running
         info!("respawn_ssh: ssh tunnel exists, not respawning");
         Ok(true)
     } else {
@@ -306,7 +304,6 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                                 error_count = error_count + 1;
                             }
                             "deleted" => {
-                                // todo: shutdown ssh and ourselves
                                 debug!("check_ssh: tunnel status via {}: tunnel was deleted, stopping tunnel", check_url);
                                 deleted = true;
                             }
