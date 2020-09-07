@@ -1,4 +1,4 @@
-//#![deny(warnings)]
+#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -9,7 +9,7 @@ use std::process::{Command, Stdio, Child};
 use std::io::Error;
 use std::sync::Arc;
 
-use log::error;
+use log::{debug, error, trace};
 
 use tokio::sync::Mutex;
 
@@ -131,6 +131,7 @@ pub async fn stop_ssh (ssh_container : Arc<Mutex<SshContainer>>) {
     if (*guard).child.is_some() {
         {
             let mut child_guard = (*guard).child.as_mut().unwrap().lock().await;
+            trace!("stop_ssh: killing child process");
             let kill_result = (*child_guard).kill();
             if kill_result.is_err() {
                 let err = kill_result.err();
@@ -139,6 +140,8 @@ pub async fn stop_ssh (ssh_container : Arc<Mutex<SshContainer>>) {
                 } else {
                     error!("stop_ssh: error killing process");
                 }
+            } else {
+                debug!("stop_ssh: killed child ssh process");
             }
         }
         (*guard).child = None;
