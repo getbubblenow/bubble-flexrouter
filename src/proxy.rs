@@ -104,7 +104,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
             trace!("proxy: ping received: {:?}", ping);
             if !ping.verify(auth_token.clone()) {
                 error!("proxy: invalid ping hash");
-                bad_request("invalid ping hash")
+                bad_request("invalid ping hash\n")
             } else {
                 let pong = Ping::new(auth_token.clone());
                 let pong_json = serde_json::to_string(&pong).unwrap();
@@ -112,11 +112,11 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                 Ok(Response::new(Body::from(pong_json)))
             }
         } else if path.eq("/health") && method == Method::GET {
-            Ok(Response::new(Body::from("proxy is alive")))
+            Ok(Response::new(Body::from("proxy is alive\n")))
 
         } else {
             error!("proxy: no host");
-            bad_request("No host")
+            bad_request("No host\n")
         }
     }
 
@@ -124,23 +124,23 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     let flex_auth_header = headers.get(HEADER_FLEX_AUTH);
     if flex_auth_header.is_none() {
         error!("proxy: no auth");
-        return bad_request("No auth");
+        return bad_request("No auth\n");
     }
     let flex_auth = flex_auth_header.unwrap().to_str();
     if flex_auth.is_err() {
         error!("proxy: auth not found");
-        return bad_request("auth not found");
+        return bad_request("auth not found\n");
     }
 
     let auth_result = serde_json::from_str(flex_auth.unwrap().to_string().as_str());
     if auth_result.is_err() {
         error!("proxy: error parsing auth: {:?}", auth_result.err());
-        return bad_request("error parsing auth");
+        return bad_request("error parsing auth\n");
     } else {
         let auth: Ping = auth_result.unwrap();
         if !auth.verify(auth_token.clone()) {
             error!("proxy: invalid auth");
-            return bad_request("invalid auth");
+            return bad_request("invalid auth\n");
         }
     }
 
@@ -151,7 +151,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     if needs_static_route(&ip_string) {
         if !create_static_route(&gateway, &ip_string) {
             error!("proxy: error creating static route to {:?}", ip_string);
-            return bad_request(format!("Error: error creating static route to {:?}", ip_string).as_str());
+            return bad_request(format!("Error: error creating static route to {:?}\n", ip_string).as_str());
         }
     }
 
@@ -184,7 +184,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
             Ok(Response::new(Body::empty()))
         } else {
             error!("proxy: CONNECT host is not socket addr: {:?}", uri);
-            return bad_request("CONNECT must be to a socket address");
+            return bad_request("CONNECT must be to a socket address\n");
         }
     } else {
         // client will resolves hostname to the same IP we resolved, using the CacheResolver
