@@ -193,7 +193,7 @@ async fn handle_register(registration : AdminRegistration,
                                     http::StatusCode::PRECONDITION_FAILED,
                                 ))
                             } else {
-                                debug!("handle_register: spawn ssh tunnel result: {:?}", ssh_result.unwrap());
+                                debug!("handle_register: spawned ssh tunnel");
                                 Ok(warp::reply::with_status(
                                     "successfully registered with bubble",
                                     http::StatusCode::OK,
