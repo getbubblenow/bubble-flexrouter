@@ -113,7 +113,7 @@ async fn handle_register(registration : AdminRegistration,
             error!("invalid request object")
         }
         return Ok(warp::reply::with_status(
-            "invalid request object",
+            "invalid request object\n",
             http::StatusCode::UNAUTHORIZED,
         ));
     }
@@ -123,12 +123,12 @@ async fn handle_register(registration : AdminRegistration,
     if pass_result.is_err() {
         error!("handle_register: error verifying password: {:?}", pass_result.err());
         Ok(warp::reply::with_status(
-            "error verifying password",
+            "error verifying password\n",
             http::StatusCode::UNAUTHORIZED,
         ))
     } else if !pass_result.unwrap() {
         Ok(warp::reply::with_status(
-            "password was incorrect",
+            "password was incorrect\n",
             http::StatusCode::UNAUTHORIZED,
         ))
     } else {
@@ -168,7 +168,7 @@ async fn handle_register(registration : AdminRegistration,
                         if reg_opt.is_err() {
                             error!("handle_register: error registering with bubble, error parsing response: {}", body);
                             Ok(warp::reply::with_status(
-                                "error registering with bubble, error parsing response",
+                                "error registering with bubble, error parsing response\n",
                                 http::StatusCode::PRECONDITION_FAILED,
                             ))
                         } else {
@@ -189,13 +189,13 @@ async fn handle_register(registration : AdminRegistration,
                                     error!("handle_register: error spawning ssh: {:?}", err.unwrap());
                                 }
                                 Ok(warp::reply::with_status(
-                                    "error registering with bubble, error spawning ssh",
+                                    "error registering with bubble, error spawning ssh\n",
                                     http::StatusCode::PRECONDITION_FAILED,
                                 ))
                             } else {
                                 debug!("handle_register: spawned ssh tunnel");
                                 Ok(warp::reply::with_status(
-                                    "successfully registered with bubble",
+                                    "successfully registered with bubble\n",
                                     http::StatusCode::OK,
                                 ))
                             }
@@ -207,7 +207,7 @@ async fn handle_register(registration : AdminRegistration,
                         let body = String::from_utf8(body_bytes.to_vec()).unwrap();
                         error!("handle_register: error registering with bubble: {:?}: {}", status_code, body);
                         Ok(warp::reply::with_status(
-                            "error registering with bubble",
+                            "error registering with bubble\n",
                             http::StatusCode::PRECONDITION_FAILED,
                         ))
                     }
@@ -216,7 +216,7 @@ async fn handle_register(registration : AdminRegistration,
             Err(error) => {
                 error!("handle_register: error registering with bubble: {:?}", error);
                 Ok(warp::reply::with_status(
-                    "error registering with bubble",
+                    "error registering with bubble\n",
                     http::StatusCode::PRECONDITION_FAILED,
                 ))
             }
