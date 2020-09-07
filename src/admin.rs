@@ -5,7 +5,6 @@
  */
 
 use std::net::SocketAddr;
-use std::process::{Command, Stdio};
 use std::sync::Arc;
 
 use log::{debug, info, error};
@@ -15,11 +14,13 @@ use reqwest::StatusCode as ReqwestStatusCode;
 
 use serde_derive::{Deserialize, Serialize};
 
+use tokio::sync::Mutex;
+
 use warp;
 use warp::{Filter};
 
 use crate::pass::is_correct_password;
-use crate::net::ssh_command;
+use crate::ssh::{spawn_ssh, SshContainer};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct AdminRegistration {
@@ -37,7 +38,8 @@ struct BubbleRegistration {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct BubbleRegistrationResponse {
-    port: Option<u16>
+    port: u16,
+    host_key: String
 }
 
 pub async fn start_admin (admin_port : u16,
@@ -47,7 +49,8 @@ pub async fn start_admin (admin_port : u16,
                           auth_token : Arc<String>,
                           ssh_priv_key : Arc<String>,
                           ssh_pub_key : Arc<String>) {
-    let admin_sock: SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
+    let admin_sock : SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
+    let ctx : Arc<Mutex<SshContainer>> = Arc::new(Mutex::new(SshContainer::new()));
 
     let register = warp::path!("register")
         .and(warp::body::content_length_limit(1024 * 16))
@@ -58,6 +61,7 @@ pub async fn start_admin (admin_port : u16,
         .and(warp::any().map(move || auth_token.clone()))
         .and(warp::any().map(move || ssh_priv_key.clone()))
         .and(warp::any().map(move || ssh_pub_key.clone()))
+        .and(warp::any().map(move || ctx.clone()))
         .and_then(handle_register);
 
     let routes = warp::post().and(register);
@@ -75,7 +79,8 @@ async fn handle_register(registration : AdminRegistration,
                          hashed_password : String,
                          auth_token : Arc<String>,
                          ssh_priv_key : Arc<String>,
-                         ssh_pub_key : Arc<String>) -> Result<impl warp::Reply, warp::Rejection> {
+                         ssh_pub_key : Arc<String>,
+                         ssh_container : Arc<Mutex<SshContainer>>) -> Result<impl warp::Reply, warp::Rejection> {
     let pass_result = is_correct_password(registration.password, hashed_password);
     if pass_result.is_err() {
         error!("handle_register: error verifying password: {:?}", pass_result.err());
@@ -122,47 +127,30 @@ async fn handle_register(registration : AdminRegistration,
                         } else {
                             let reg_response: BubbleRegistrationResponse = reg_opt.unwrap();
                             info!("handle_register: parsed response object: {:?}", reg_response);
-                            let port_opt = reg_response.port;
-                            if port_opt.is_none() {
-                                error!("handle_register: error registering with bubble, response did not include a port");
+                            let ssh_result = spawn_ssh(
+                                ssh_container,
+                                reg_response.port,
+                                proxy_port,
+                                registration.bubble,
+                                reg_response.host_key,
+                                ssh_priv_key).await;
+                            if ssh_result.is_err() {
+                                let err = ssh_result.err();
+                                if err.is_none() {
+                                    error!("handle_register: error spawning ssh");
+                                } else {
+                                    error!("handle_register: error spawning ssh: {:?}", err.unwrap());
+                                }
                                 Ok(warp::reply::with_status(
-                                    "error registering with bubble, response did not include a port",
+                                    "error registering with bubble, error spawning ssh",
                                     http::StatusCode::PRECONDITION_FAILED,
                                 ))
                             } else {
-                                let port = port_opt.unwrap();
-                                info!("handle_register: received port: {}", port);
-                                // todo: start or restart ssh service
-                                let tunnel = format!("{}:127.0.0.1:{}", port, proxy_port);
-                                let target = format!("bubble-flex@{}", registration.bubble);
-                                let ssh = Command::new(ssh_command())
-                                    .stdin(Stdio::null())
-                                    .stdout(Stdio::null())
-                                    .stderr(Stdio::null())
-                                    .arg("-Nn")
-                                    .arg("-R")
-                                    .arg(tunnel)
-                                    .arg(target)
-                                    .spawn();
-                                if ssh.is_err() {
-                                    let err = ssh.err();
-                                    if err.is_none() {
-                                        error!("handle_register: error spawning ssh");
-                                    } else {
-                                        error!("handle_register: error spawning ssh: {:?}", err.unwrap());
-                                    }
-                                    Ok(warp::reply::with_status(
-                                        "error spawning ssh",
-                                        http::StatusCode::PRECONDITION_FAILED,
-                                    ))
-                                } else {
-                                    let mut child = ssh.unwrap();
-                                    // child.kill();
-                                    Ok(warp::reply::with_status(
-                                        "successfully registered with bubble",
-                                        http::StatusCode::OK,
-                                    ))
-                                }
+                                debug!("handle_register: spawn ssh tunnel result: {:?}", ssh_result.unwrap());
+                                Ok(warp::reply::with_status(
+                                    "successfully registered with bubble",
+                                    http::StatusCode::OK,
+                                ))
                             }
                         }
                     },

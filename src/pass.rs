@@ -8,9 +8,6 @@ extern crate bcrypt;
 extern crate rand;
 
 use std::fs;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
 use std::process::exit;
 
 use bcrypt::{DEFAULT_COST, BcryptResult, hash, verify};
@@ -18,6 +15,7 @@ use bcrypt::{DEFAULT_COST, BcryptResult, hash, verify};
 use log::error;
 
 use crate::util::read_required_env_var_argument;
+use crate::util::write_string_to_file;
 
 pub fn is_correct_password(given_password : String, hashed_password : String) -> BcryptResult<bool> {
     verify(given_password.trim(), hashed_password.trim())
@@ -26,40 +24,32 @@ pub fn is_correct_password(given_password : String, hashed_password : String) ->
 pub fn init_password (password_file_name : &str, password_opt : Option<&str>) -> String {
     if password_opt.is_some() {
         let password_val = read_required_env_var_argument("password-env-var", password_opt);
-        let password_path = Path::new(password_file_name);
-
-        let password_file_result = File::create(password_path);
-        if password_file_result.is_err() {
-            let err = password_file_result.err();
-            if err.is_none() {
-                error!("unknown error writing to password file {}\n", password_file_name);
-            } else {
-                error!("error writing to password file {}: {:?}\n", password_file_name, err);
-            }
-            exit(3);
-        }
-        let mut password_file = password_file_result.unwrap();
 
         let bcrypt_result = hash(password_val, DEFAULT_COST);
         if bcrypt_result.is_err() {
             let err = bcrypt_result.err();
             if err.is_none() {
-                error!("unknown error encrypting password\n");
+                error!("unknown error encrypting password");
             } else {
-                error!("error encrypting password: {:?}\n", err.unwrap());
+                error!("error encrypting password: {:?}", err.unwrap());
             }
             exit(3);
         }
 
-        let write_result = password_file.write_all(bcrypt_result.unwrap().as_bytes());
+        let write_result = write_string_to_file(password_file_name, bcrypt_result.unwrap());
         if write_result.is_err() {
             let err = write_result.err();
-            if err.is_none() {
-                error!("unknown error writing password file {}\n", password_file_name);
+            if err.is_some() {
+                let err = err.unwrap();
+                if err.is_some() {
+                    error!("error writing bcrypt password to file: {}: {:?}", password_file_name, err.unwrap());
+                } else {
+                    error!("error writing bcrypt password to file: {}", password_file_name);
+                }
             } else {
-                error!("error writing password file {}: {:?}\n", password_file_name, err.unwrap());
+                error!("error writing bcrypt password to file: {}", password_file_name);
             }
-            exit(3);
+            exit(3)
         }
     }
 

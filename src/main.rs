@@ -174,14 +174,15 @@ async fn main() {
 
     let ssh_key_file_env_var_opt = args.value_of("ssh_key_file");
     let ssh_key_path_path_string = read_required_env_var_argument("ssh-key-file", ssh_key_file_env_var_opt);
-    let ssh_key_path = Path::new(ssh_key_path_path_string.as_str());
+    let ssh_priv_key = Arc::new(ssh_key_path_path_string);
+    let ssh_priv_clone = ssh_priv_key.clone();
+    let ssh_key_path = Path::new(ssh_priv_clone.as_str());
     if !ssh_key_path.exists() {
         error!("read_required_env_var_argument_as_path: file does not exist: {}", ssh_key_path.to_str().unwrap());
         exit(2);
     }
 
-    let ssh_priv_key = Arc::new(read_path_to_string(ssh_key_path));
-    let ssh_pub_key_path_name = format!("{}.pub", ssh_key_path.to_str().unwrap());
+    let ssh_pub_key_path_name = format!("{}.pub", ssh_priv_key);
     let ssh_pub_key_path = Path::new(ssh_pub_key_path_name.as_str());
     let ssh_pub_key = Arc::new(read_path_to_string(ssh_pub_key_path));
 

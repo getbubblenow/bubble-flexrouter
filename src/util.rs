@@ -5,7 +5,10 @@
  */
 
 use std::env;
+use std::io::Write;
+use std::io::Error;
 use std::fs;
+use std::fs::File;
 use std::path::Path;
 use std::process::exit;
 
@@ -53,4 +56,34 @@ pub fn read_path_to_string(path: &Path) -> String {
         exit(2);
     }
     read_result.unwrap()
+}
+
+pub fn write_string_to_file(path: &str, data : String) -> Result<bool, Option<Error>> {
+    let file_path = Path::new(path);
+    let file_result = File::create(file_path);
+    if file_result.is_err() {
+        let err = file_result.err();
+        if err.is_none() {
+            error!("unknown error creating file {}\n", path);
+        } else {
+            error!("error creating file {}: {:?}\n", path, err);
+        }
+        exit(3);
+    }
+    let mut file = file_result.unwrap();
+
+    let write_result = file.write_all(data.as_bytes());
+    if write_result.is_err() {
+        let err = write_result.err();
+        if err.is_none() {
+            error!("unknown error writing file {}\n", path);
+            Err(None)
+        } else {
+            let err= err.unwrap();
+            error!("error writing file {}: {:?}\n", path, err);
+            Err(Some(err))
+        }
+    } else {
+        Ok(true)
+    }
 }
