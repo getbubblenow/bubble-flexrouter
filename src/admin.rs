@@ -1,4 +1,4 @@
-//#![deny(warnings)]
+#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -7,7 +7,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use log::{debug, info, error};
+use log::{trace, debug, info, error};
 
 use reqwest;
 use reqwest::StatusCode as ReqwestStatusCode;
@@ -59,21 +59,17 @@ struct BubbleRegistration {
 }
 
 struct BubbleInternalRegistration {
-    key: String,
     ip: Arc<String>,
     bubble: Arc<String>,
-    session: Arc<String>,
-    auth_token: String
+    session: Arc<String>
 }
 
 impl BubbleInternalRegistration {
     pub fn new(reg : &BubbleRegistration, bubble : String, session : String) -> BubbleInternalRegistration {
         BubbleInternalRegistration {
-            key: reg.key.clone(),
             ip: Arc::new(reg.ip.clone()),
             bubble: Arc::new(bubble.clone()),
-            session: Arc::new(session.clone()),
-            auth_token: reg.auth_token.clone()
+            session: Arc::new(session.clone())
         }
     }
 }
@@ -92,7 +88,7 @@ pub async fn start_admin (admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
                           ssh_priv_key : Arc<String>,
                           ssh_pub_key : Arc<String>) {
     let admin_sock : SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
-    let ctx : Arc<Mutex<SshContainer>> = Arc::new(Mutex::new(SshContainer::new()));
+    let ssh_container: Arc<Mutex<SshContainer>> = Arc::new(Mutex::new(SshContainer::new()));
 
     let register = warp::path!("register")
         .and(warp::body::content_length_limit(1024 * 16))
@@ -103,7 +99,7 @@ pub async fn start_admin (admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
         .and(warp::any().map(move || auth_token.clone()))
         .and(warp::any().map(move || ssh_priv_key.clone()))
         .and(warp::any().map(move || ssh_pub_key.clone()))
-        .and(warp::any().map(move || ctx.clone()))
+        .and(warp::any().map(move || ssh_container.clone()))
         .and_then(handle_register);
 
     let routes = warp::post().and(register);
@@ -157,6 +153,7 @@ async fn handle_register(registration : AdminRegistration,
             let mut guard = admin_reg.lock().await;
             if (*guard).is_some() {
                 // shut down previous tunnel
+                debug!("handle_register: ssh_container exists, stopping current ssh tunnel and checker");
                 stop_ssh_and_checker(ssh_container.clone()).await;
             }
 
@@ -173,7 +170,7 @@ async fn handle_register(registration : AdminRegistration,
         // PUT it and see if it worked
         let client = reqwest::Client::new();
         let url = format!("https://{}/api/me/flexRouters", internal_reg.bubble.clone());
-        debug!("handle_register registering ourself with {}, sending: {:?}", url, bubble_registration);
+        trace!("handle_register: registering ourself with {}, sending: {:?}", url, bubble_registration);
         let session = internal_reg.session.clone();
         match client.put(url.as_str())
             .header(HEADER_BUBBLE_SESSION, session.to_string())

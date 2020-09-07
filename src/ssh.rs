@@ -1,4 +1,4 @@
-//#![deny(warnings)]
+#![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
@@ -9,7 +9,7 @@ use std::process::{Command, Stdio, Child};
 use std::io::Error;
 use std::sync::Arc;
 
-use futures::future::{abortable, Abortable, AbortHandle};
+use futures::future::{abortable, AbortHandle};
 
 use log::{debug, info, error, trace};
 
@@ -21,7 +21,7 @@ use tokio::sync::Mutex;
 
 use whoami::{platform, Platform};
 
-use crate::util::{HEADER_BUBBLE_SESSION, write_string_to_file};
+use crate::util::{HEADER_BUBBLE_SESSION, write_string_to_file, now_micros};
 
 const SSH_WINDOWS: &'static str = "C:\\Windows\\System32\\OpenSSH\\ssh.exe";
 const SSH_MACOS: &'static str = "/usr/bin/ssh";
@@ -50,7 +50,8 @@ pub struct SshContainer {
     pub session: Option<Arc<String>>,
     pub host_key: Option<String>,
     pub priv_key: Option<Arc<String>>,
-    pub checker: Option<Arc<Mutex<AbortHandle>>>
+    pub checker_done_flag: u128,
+    pub checker_abort_handle: Option<Arc<Mutex<AbortHandle>>>
 }
 
 impl SshContainer {
@@ -64,7 +65,8 @@ impl SshContainer {
             session: None,
             host_key: None,
             priv_key: None,
-            checker: None
+            checker_done_flag: 0,
+            checker_abort_handle: None
         }
     }
 }
@@ -76,12 +78,12 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                         bubble : Arc<String>,
                         session : Arc<String>,
                         host_key : String,
-                        priv_key : Arc<String>) -> Result<Arc<Mutex<SshContainer>>, Option<Error>> {
-
+                        priv_key : Arc<String>) -> Result<bool, Option<Error>> {
     let mut guard = ssh_container.lock().await;
     if (*guard).child.is_some() {
         // todo: verify that child is still running
-        Ok(ssh_container.clone())
+        info!("spawn_ssh: ssh tunnel exists, not respawning");
+        Ok(true)
     } else {
         let tunnel = format!("{}:127.0.0.1:{}", port, proxy_port);
         let target = format!("bubble-flex@{}", bubble);
@@ -117,10 +119,11 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                 let check_host = bubble.clone();
                 let check_ip = ip.clone();
                 let check_session = session.clone();
+                trace!("spawn_ssh: starting abortable checker");
                 let task = tokio::spawn(check_ssh(ssh_container.clone(), check_host, check_ip, check_session));
-                let (fut, abort_handle) = abortable(task);
-                (*guard).checker = Some(Arc::new(Mutex::new(abort_handle)));
-                Ok(ssh_container.clone())
+                let (_fut, abort_handle) = abortable(task);
+                (*guard).checker_abort_handle = Some(Arc::new(Mutex::new(abort_handle)));
+                Ok(true)
             } else {
                 let err = result.err();
                 if err.is_none() {
@@ -141,12 +144,12 @@ pub async fn respawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                           session : Arc<String>,
                           host_key : String,
                           priv_key : Arc<String>,
-                          checker : Arc<Mutex<AbortHandle>>) -> Result<Arc<Mutex<SshContainer>>, Option<Error>> {
-
+                          checker_abort_handler : Arc<Mutex<AbortHandle>>) -> Result<bool, Option<Error>> {
     let mut guard = ssh_container.lock().await;
     if (*guard).child.is_some() {
         // todo: verify that child is still running
-        Ok(ssh_container.clone())
+        info!("respawn_ssh: ssh tunnel exists, not respawning");
+        Ok(true)
     } else {
         let tunnel = format!("{}:127.0.0.1:{}", port, proxy_port);
         let target = format!("bubble-flex@{}", bubble);
@@ -171,16 +174,19 @@ pub async fn respawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
             let child;
             if result.is_ok() {
                 child = result.unwrap();
-                (*guard).child = Some(Mutex::new(child));
-                (*guard).ip = Some(ip.clone());
-                (*guard).port = Some(port);
-                (*guard).proxy_port = Some(proxy_port);
-                (*guard).bubble = Some(bubble.clone());
-                (*guard).session = Some(session.clone());
-                (*guard).host_key = Some(host_key.clone());
-                (*guard).priv_key = Some(priv_key.clone());
-                (*guard).checker = Some(checker.clone());
-                Ok(ssh_container.clone())
+                (*guard) = SshContainer {
+                    child: Some(Mutex::new(child)),
+                    ip: Some(ip.clone()),
+                    port: Some(port),
+                    proxy_port: Some(proxy_port),
+                    bubble: Some(bubble.clone()),
+                    session: Some(session.clone()),
+                    host_key: Some(host_key.clone()),
+                    priv_key: Some(priv_key.clone()),
+                    checker_abort_handle: Some(checker_abort_handler),
+                    checker_done_flag: now_micros()
+                };
+                Ok(true)
             } else {
                 let err = result.err();
                 if err.is_none() {
@@ -220,7 +226,7 @@ const CHECK_SSH_HTTP_TIMEOUT: u64 = 10;
 async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                     bubble : Arc<String>,
                     ip : Arc<String>,
-                    session : Arc<String>) {
+                    session : Arc<String>) -> bool {
     let mut checker = interval_at(Instant::now().checked_add(Duration::new(CHECK_SSH_START_DELAY, 0)).unwrap(), Duration::new(CHECK_SSH_INTERVAL, 0));
     let check_url = format!("https://{}/api/me/flexRouters/{}/status", bubble.clone(), ip.clone());
     let client = reqwest::Client::builder()
@@ -229,8 +235,20 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
     let mut error_count : u8 = 0;
     let mut deleted : bool = false;
     let session = session.clone();
+    let start_time = now_micros();
     loop {
         checker.tick().await;
+
+        trace!("check_ssh: locking ssh_container to examine checker_done_flag");
+        let guard = ssh_container.lock().await;
+        {
+            if (*guard).checker_done_flag > start_time {
+                trace!("check_ssh: checker_done_flag activated, returning");
+                return true;
+            }
+            trace!("check_ssh: checker_done_flag not activated, continuing");
+        }
+
         trace!("check_ssh: checking status via {}", check_url);
         let check_result = client.get(check_url.as_str())
             .header(HEADER_BUBBLE_SESSION, session.to_string())
@@ -257,7 +275,7 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                                 error_count = 0;
                             }
                             "unreachable" => {
-                                debug!("check_ssh: tunnel status via {}: tunnel is unreachable, restarting tunnel", check_url);
+                                debug!("check_ssh: tunnel status via {}: tunnel is unreachable", check_url);
                                 error_count = error_count + 1;
                             }
                             "deleted" => {
@@ -277,7 +295,8 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                 }
                 if deleted {
                     info!("check_ssh: tunnel deleted, stopping ssh and checker");
-                    stop_ssh_and_checker(ssh_container.clone());
+                    stop_ssh_and_checker(ssh_container.clone()).await;
+                    return false;
 
                 } else if error_count >= MAX_CHECK_ERRORS_BEFORE_RESTART {
                     info!("check_ssh: tunnel had too many errors, restarting ssh tunnel");
@@ -288,18 +307,24 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                     let bubble;
                     let host_key;
                     let priv_key;
-                    let checker;
+                    let checker_abort_handle;
                     trace!("check_ssh: locking ssh_container to copy values");
-                    let mut guard = ssh_container.lock().await;
                     {
-                        ip = (*guard).ip.clone();
-                        port = (*guard).port.unwrap().clone();
-                        proxy_port = (*guard).proxy_port.unwrap().clone();
-                        session = (*guard).session.clone();
-                        bubble = (*guard).bubble.clone();
-                        host_key = (*guard).host_key.clone();
-                        priv_key = (*guard).priv_key.clone();
-                        checker = (*guard).checker.clone();
+                        let guard = ssh_container.lock().await;
+                        {
+                            ip = (*guard).ip.clone();
+                            port = (*guard).port.unwrap().clone();
+                            proxy_port = (*guard).proxy_port.unwrap().clone();
+                            session = (*guard).session.clone();
+                            bubble = (*guard).bubble.clone();
+                            host_key = (*guard).host_key.clone();
+                            priv_key = (*guard).priv_key.clone();
+                            checker_abort_handle = (*guard).checker_abort_handle.clone();
+                        }
+                    }
+                    if ip.is_none() {
+                        error!("check_ssh: ssh_container.ip was empty, bailing out");
+                        return false;
                     }
                     trace!("check_ssh: calling stop_ssh");
                     stop_ssh_retain_checker(ssh_container.clone()).await;
@@ -312,7 +337,7 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                                                  session.unwrap(),
                                                  host_key.unwrap(),
                                                  priv_key.unwrap(),
-                                                 checker.unwrap()).await;
+                                                 checker_abort_handle.unwrap()).await;
                     if ssh_result.is_err() {
                         let err = ssh_result.err();
                         if err.is_none() {
@@ -348,25 +373,28 @@ pub fn host_file() -> &'static str {
 }
 
 pub async fn stop_ssh_retain_checker (ssh_container : Arc<Mutex<SshContainer>>) {
-    return stop_ssh(ssh_container, false).await;
+    stop_ssh(ssh_container, false).await
 }
 
 pub async fn stop_ssh_and_checker (ssh_container : Arc<Mutex<SshContainer>>) {
-    return stop_ssh(ssh_container, true).await;
+    stop_ssh(ssh_container, true).await
 }
 
 pub async fn stop_ssh (ssh_container : Arc<Mutex<SshContainer>>, stop_checker : bool) {
     let mut guard = ssh_container.lock().await;
     if stop_checker {
-        if (*guard).checker.is_some() {
+        if (*guard).checker_abort_handle.is_some() {
             {
                 trace!("stop_ssh: aborting checker");
-                let mut checker_guard = (*guard).checker.as_mut().unwrap().lock().await;
+                let checker_guard = (*guard).checker_abort_handle.as_mut().unwrap().lock().await;
                 checker_guard.abort();
                 trace!("stop_ssh: aborted checker");
             }
-            (*guard).checker = None;
+            (*guard).checker_abort_handle = None;
         }
+        trace!("stop_ssh: setting checker_done_flag = true");
+        (*guard).checker_done_flag = now_micros();
+        trace!("stop_ssh: set checker_done_flag = true");
     }
     if (*guard).child.is_some() {
         {

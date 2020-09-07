@@ -11,6 +11,7 @@ use std::fs;
 use std::fs::File;
 use std::path::Path;
 use std::process::exit;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use log::error;
 
@@ -88,4 +89,8 @@ pub fn write_string_to_file(path: &str, data : String) -> Result<bool, Option<Er
     } else {
         Ok(true)
     }
+}
+
+pub fn now_micros () -> u128 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros()
 }

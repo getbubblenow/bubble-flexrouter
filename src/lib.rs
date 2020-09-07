@@ -1,4 +1,4 @@
-//#![deny(warnings)]
+#![deny(warnings)]
 
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
