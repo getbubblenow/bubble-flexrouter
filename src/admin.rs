@@ -20,7 +20,7 @@ use warp;
 use warp::{Filter};
 
 use crate::pass::is_correct_password;
-use crate::ssh::{spawn_ssh, stop_ssh, SshContainer};
+use crate::ssh::{spawn_ssh, stop_ssh_and_checker, SshContainer};
 use crate::net::is_valid_ip;
 use crate::util::HEADER_BUBBLE_SESSION;
 
@@ -157,7 +157,7 @@ async fn handle_register(registration : AdminRegistration,
             let mut guard = admin_reg.lock().await;
             if (*guard).is_some() {
                 // shut down previous tunnel
-                stop_ssh(ssh_container.clone()).await;
+                stop_ssh_and_checker(ssh_container.clone()).await;
             }
 
             // create the registration object
