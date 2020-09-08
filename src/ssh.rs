@@ -260,7 +260,7 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
             checker_abort_handle = (*guard).checker_abort_handle.clone().unwrap();
         }
     }
-
+    trace!("check_ssh: copied ssh_container values, awaiting first tick");
     loop {
         checker.tick().await;
 
