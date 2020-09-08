@@ -84,6 +84,7 @@ pub async fn start_proxy (dns1_ip : &str,
     debug!("start_proxy: Proxy await result: {:?}", result);
 }
 
+// matches value of bubble_api.HEADER_FLEX_AUTH in mitmproxy
 const HEADER_FLEX_AUTH: &'static str = "X-Bubble-Flex-Auth";
 
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
