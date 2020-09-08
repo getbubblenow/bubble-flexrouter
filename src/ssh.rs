@@ -296,7 +296,11 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                                 error_count = error_count + 1;
                             }
                             "active" => {
-                                debug!("check_ssh: tunnel status via {}: tunnel status is OK", check_url);
+                                if error_count > 0 {
+                                    info!("check_ssh: tunnel status via {}: tunnel status is OK", check_url);
+                                } else {
+                                    trace!("check_ssh: tunnel status via {}: tunnel status is OK", check_url);
+                                }
                                 error_count = 0;
                             }
                             "unreachable" => {

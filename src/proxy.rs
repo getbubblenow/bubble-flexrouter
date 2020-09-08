@@ -1,3 +1,4 @@
+
 #![deny(warnings)]
 /**
  * Copyright (c) 2020 Bubble, Inc.  All rights reserved.
@@ -84,9 +85,6 @@ pub async fn start_proxy (dns1_ip : &str,
     debug!("start_proxy: Proxy await result: {:?}", result);
 }
 
-// matches value of bubble_api.HEADER_FLEX_AUTH in mitmproxy
-const HEADER_FLEX_AUTH: &'static str = "X-Bubble-Flex-Auth";
-
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                gateway: Arc<String>,
                resolver: Arc<TokioAsyncResolver>,
@@ -121,36 +119,14 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
         }
     }
 
-    let headers = req.headers();
-    let flex_auth_header = headers.get(HEADER_FLEX_AUTH);
-    if flex_auth_header.is_none() {
-        error!("proxy: no auth");
-        return bad_request("No auth\n");
-    }
-    let flex_auth = flex_auth_header.unwrap().to_str();
-    if flex_auth.is_err() {
-        error!("proxy: auth not found");
-        return bad_request("auth not found\n");
-    }
-
-    let auth_result = serde_json::from_str(flex_auth.unwrap().to_string().as_str());
-    if auth_result.is_err() {
-        error!("proxy: error parsing auth: {:?}", auth_result.err());
-        return bad_request("error parsing auth\n");
-    } else {
-        let auth: Ping = auth_result.unwrap();
-        if !auth.verify(auth_token.clone()) {
-            error!("proxy: invalid auth");
-            return bad_request("invalid auth\n");
-        }
-    }
-
     let host = host.unwrap();
     let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
     info!("proxy: req(host {} resolved to: {}): {:?}", host, ip_string, req);
 
     if needs_static_route(&ip_string) {
         if !create_static_route(&gateway, &ip_string) {
+            // we MUST fail here, without a valid static route, the request would go back out
+            // through the VPN interface, creating an infinite loop
             error!("proxy: error creating static route to {:?}", ip_string);
             return bad_request(format!("Error: error creating static route to {:?}\n", ip_string).as_str());
         }
@@ -181,15 +157,25 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                     Err(e) => error!("proxy: upgrade error: {}", e),
                 }
             });
-
-            Ok(Response::new(Body::empty()))
+            return Ok(Response::new(Body::empty()));
         } else {
             error!("proxy: CONNECT host is not socket addr: {:?}", uri);
             return bad_request("CONNECT must be to a socket address\n");
         }
     } else {
         // client will resolves hostname to the same IP we resolved, using the CacheResolver
-        client.request(req).await
+        debug!("proxy: requesting uri: {:?}", req.uri());
+        let result = client.request(req).await;
+        if result.is_err() {
+            let err = result.err();
+            if err.is_none() {
+                error!("proxy: error proxying");
+            } else {
+                error!("proxy: error proxying: {:?}", err);
+            }
+            return bad_request("proxy: error proxying\n");
+        }
+        result
     }
 }
 
