@@ -6,7 +6,7 @@
 
 use std::process::{exit, Command, Stdio};
 
-use log::{debug, info, error};
+use log::{trace, info, error};
 
 use pnet::datalink;
 
