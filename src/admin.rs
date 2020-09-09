@@ -191,7 +191,7 @@ async fn handle_register(registration : AdminRegistration,
                             ))
                         } else {
                             let reg_response: BubbleRegistrationResponse = reg_opt.unwrap();
-                            info!("handle_register: parsed response object: {:?}", reg_response);
+                            trace!("handle_register: parsed response object: {:?}", reg_response);
                             let ssh_result = spawn_ssh(
                                 ssh_container.clone(),
                                 internal_reg.ip.clone(),
