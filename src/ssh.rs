@@ -330,6 +330,7 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                     return false;
 
                 } else if error_count >= MAX_CHECK_ERRORS_BEFORE_RESTART {
+                    conn_ok = false;
                     info!("check_ssh: tunnel had too many errors, restarting ssh tunnel");
                     trace!("check_ssh: calling stop_ssh_retain_checker");
                     stop_ssh_retain_checker(ssh_container.clone()).await;
