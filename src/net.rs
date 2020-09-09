@@ -99,7 +99,7 @@ pub fn ip_gateway() -> String {
 }
 
 pub fn needs_static_route(ip_string: &String) -> bool {
-    debug!("needs_static_route: checking ip={:?}", ip_string);
+    trace!("needs_static_route: checking ip={:?}", ip_string);
     let platform: Platform = platform();
     let output = match platform {
         Platform::Windows => {
