@@ -235,6 +235,7 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
         .default_headers(headers)
         .build().unwrap();
     let mut error_count : u8 = 0;
+    let mut conn_error : bool = false;
     let mut deleted : bool = false;
     let start_time = now_micros();
 
@@ -296,12 +297,13 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                                 error_count = error_count + 1;
                             }
                             "active" => {
-                                if error_count > 0 {
+                                if error_count > 0 || conn_error {
                                     info!("check_ssh: tunnel status via {}: tunnel status is OK", check_url);
                                 } else {
                                     trace!("check_ssh: tunnel status via {}: tunnel status is OK", check_url);
                                 }
                                 error_count = 0;
+                                conn_error = false;
                             }
                             "unreachable" => {
                                 debug!("check_ssh: tunnel status via {}: tunnel is unreachable", check_url);
@@ -319,6 +321,7 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                     },
                     _ => {
                         error!("check_ssh: error checking tunnel status via {}: status={:?} body={}", check_url, &status_code, body);
+                        conn_error = true;
                     }
                 }
                 if deleted {
