@@ -34,6 +34,7 @@ use bubble_flexrouter::proxy::start_proxy;
 use bubble_flexrouter::util::read_required_env_var_argument;
 use bubble_flexrouter::util::read_required_env_var_argument_as_file;
 use bubble_flexrouter::util::read_path_to_string;
+use bubble_flexrouter::version::VERSION;
 
 const MIN_TOKEN_CHARS: usize = 50;
 const MAX_TOKEN_CHARS: usize = 100;
@@ -41,7 +42,7 @@ const MAX_TOKEN_CHARS: usize = 100;
 #[tokio::main]
 async fn main() {
     let args : ArgMatches = App::new("bubble-flexrouter")
-        .version("0.1.0")
+        .version(VERSION)
         .author("Jonathan Cobb <jonathan@getbubblenow.com>")
         .about("Proxy services for Bubble nodes")
         .arg(Arg::with_name("dns1")
