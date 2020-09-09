@@ -7,7 +7,7 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use log::{trace, debug, info, error};
+use log::{trace, debug, info, warn, error};
 
 use reqwest;
 use reqwest::StatusCode as ReqwestStatusCode;
@@ -24,12 +24,19 @@ use crate::ssh::{spawn_ssh, stop_ssh_and_checker, SshContainer};
 use crate::net::is_valid_ip;
 use crate::util::HEADER_BUBBLE_SESSION;
 
+const MAX_POST_LIMIT: u64 = 1024 * 16;
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct AdminRegistration {
     password: Option<String>,
     session: Option<String>,
     bubble: Option<String>,
     ip: Option<String>
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct AdminUnregistration {
+    password: Option<String>
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -90,19 +97,33 @@ pub async fn start_admin (admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
     let admin_sock : SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
     let ssh_container: Arc<Mutex<SshContainer>> = Arc::new(Mutex::new(SshContainer::new()));
 
-    let register = warp::path!("register")
-        .and(warp::body::content_length_limit(1024 * 16))
+    let admin_reg_clone = admin_reg.clone();
+    let password_hash_clone = password_hash.clone();
+    let ssh_container_clone = ssh_container.clone();
+    let register = warp::post().and(warp::path!("register")
+        .and(warp::body::content_length_limit(MAX_POST_LIMIT))
         .and(warp::body::json())
-        .and(warp::any().map(move || admin_reg.clone()))
+        .and(warp::any().map(move || admin_reg_clone.clone()))
         .and(warp::any().map(move || proxy_port))
-        .and(warp::any().map(move || password_hash.clone()))
+        .and(warp::any().map(move || password_hash_clone.clone()))
         .and(warp::any().map(move || auth_token.clone()))
         .and(warp::any().map(move || ssh_priv_key.clone()))
         .and(warp::any().map(move || ssh_pub_key.clone()))
-        .and(warp::any().map(move || ssh_container.clone()))
-        .and_then(handle_register);
+        .and(warp::any().map(move || ssh_container_clone.clone()))
+        .and_then(handle_register));
 
-    let routes = warp::post().and(register);
+    let admin_reg_clone = admin_reg.clone();
+    let password_hash_clone = password_hash.clone();
+    let ssh_container_clone = ssh_container.clone();
+    let unregister = warp::post().and(warp::path!("unregister")
+        .and(warp::body::content_length_limit(MAX_POST_LIMIT))
+        .and(warp::body::json())
+        .and(warp::any().map(move || admin_reg_clone.clone()))
+        .and(warp::any().map(move || password_hash_clone.clone()))
+        .and(warp::any().map(move || ssh_container_clone.clone()))
+        .and_then(handle_unregister));
+
+    let routes = register.or(unregister);
 
     let admin_server = warp::serve(routes).run(admin_sock);
     info!("start_admin: Admin listening on {}", admin_sock);
@@ -241,6 +262,50 @@ async fn handle_register(registration : AdminRegistration,
                 ))
             }
         }
+    }
+}
+
+pub async fn handle_unregister(unregistration : AdminUnregistration,
+                               admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
+                               hashed_password : String,
+                               ssh_container : Arc<Mutex<SshContainer>>) -> Result<impl warp::Reply, warp::Rejection> {
+    if unregistration.password.is_none() {
+        return Ok(warp::reply::with_status(
+            "no password\n",
+            http::StatusCode::UNAUTHORIZED,
+        ));
+    }
+
+    let pass_result = is_correct_password(unregistration.password.unwrap(), hashed_password);
+    if pass_result.is_err() {
+        error!("handle_unregister: error verifying password: {:?}", pass_result.err());
+        Ok(warp::reply::with_status(
+            "error verifying password\n",
+            http::StatusCode::UNAUTHORIZED,
+        ))
+    } else if !pass_result.unwrap() {
+        Ok(warp::reply::with_status(
+            "password was incorrect\n",
+            http::StatusCode::UNAUTHORIZED,
+        ))
+    } else {
+        // do we have a previous registration?
+        {
+            let mut guard = admin_reg.lock().await;
+            if (*guard).is_some() {
+                // shut down previous tunnel
+                debug!("handle_register: ssh_container exists, stopping current ssh tunnel and checker");
+                stop_ssh_and_checker(ssh_container.clone()).await;
+                (*guard) = None;
+                info!("handle_unregister: successfully unregistered");
+            } else {
+                warn!("handle_unregister: not registered, cannot unregister");
+            }
+        }
+        Ok(warp::reply::with_status(
+            "successfully unregistered from bubble\n",
+            http::StatusCode::OK,
+        ))
     }
 }
 

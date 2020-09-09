@@ -125,8 +125,10 @@ async fn main() {
         .timestamp(stderrlog::Timestamp::Millisecond)
         .init().unwrap();
 
+    info!("Starting bubble-flexrouter version {} ", VERSION);
+
     // todo: ensure we are running as root (or Administrator on Windows)
-    info!("The ID of the current user is {}", whoami::username());
+    info!("The current user is {}", whoami::username());
 
     let password_file_env_var_opt = args.value_of("password_file");
     let password_file = read_required_env_var_argument("password-file", password_file_env_var_opt);
