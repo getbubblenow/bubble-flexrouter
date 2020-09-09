@@ -8,4 +8,4 @@ if [[ -z "${BUILD_NUMBER}" ]] ; then
   exit 1
 fi
 cp src/version.rs  src/version.rs.orig
-cat src/version.rs.orig | sed "s/.DEV_BUILD/\.${BUILD_NUMBER}/" > src/version.rs
+cat src/version.rs.orig | sed "s/.DEV_BUILD/.${BUILD_NUMBER}/" > src/version.rs
