@@ -121,7 +121,8 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
 
     let host = host.unwrap();
     let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
-    info!("proxy: req(host {} resolved to: {}): {:?}", host, ip_string, req);
+    info!("proxy: host {} resolved to: {}", host, ip_string);
+    trace!("proxy: request is {:?}", req);
 
     if needs_static_route(&ip_string) {
         if !create_static_route(&gateway, &ip_string) {
