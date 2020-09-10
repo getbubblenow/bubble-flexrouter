@@ -79,9 +79,9 @@ This request must include the request header `Content-Type: application/json`
     POST http://127.0.0.1:9833/register
     {
       "password": "<password>",
-      "session":"<session-token>",
-      "bubble":"<bubble-hostname>",
-      "ip":"<client-vpn-ip>"
+      "session": "<session-token>",
+      "bubble": "<bubble-hostname>",
+      "ip": "<client-vpn-ip>"
     }
 
 Where:
