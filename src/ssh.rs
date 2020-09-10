@@ -79,7 +79,8 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                         bubble : Arc<String>,
                         session : Arc<String>,
                         host_key : String,
-                        priv_key : Arc<String>) -> Result<bool, Option<Error>> {
+                        priv_key : Arc<String>,
+                        check_ssh_interval : u64) -> Result<bool, Option<Error>> {
     let mut guard = ssh_container.lock().await;
     if (*guard).child.is_some() {
         info!("spawn_ssh: ssh tunnel exists, not respawning");
@@ -120,7 +121,7 @@ pub async fn spawn_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                 let check_ip = ip.clone();
                 let check_session = session.clone();
                 trace!("spawn_ssh: starting abortable checker");
-                let task = tokio::spawn(check_ssh(ssh_container.clone(), check_host, check_ip, check_session));
+                let task = tokio::spawn(check_ssh(ssh_container.clone(), check_host, check_ip, check_session, check_ssh_interval));
                 let (_fut, abort_handle) = abortable(task);
                 (*guard).checker_abort_handle = Some(Arc::new(Mutex::new(abort_handle)));
                 Ok(true)
@@ -218,15 +219,15 @@ fn build_ssh_command<'a>(command : &mut Command, tunnel: String, target: String,
 }
 
 const CHECK_SSH_START_DELAY : u64 = 10;
-const CHECK_SSH_INTERVAL: u64 = 10;
 const MAX_CHECK_ERRORS_BEFORE_RESTART : u8 = 3;
 const CHECK_SSH_HTTP_TIMEOUT: u64 = 10;
 
 async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                     bubble : Arc<String>,
                     ip : Arc<String>,
-                    session : Arc<String>) -> bool {
-    let mut checker = interval_at(Instant::now().checked_add(Duration::new(CHECK_SSH_START_DELAY, 0)).unwrap(), Duration::new(CHECK_SSH_INTERVAL, 0));
+                    session : Arc<String>,
+                    check_ssh_interval : u64) -> bool {
+    let mut checker = interval_at(Instant::now().checked_add(Duration::new(CHECK_SSH_START_DELAY, 0)).unwrap(), Duration::new(check_ssh_interval, 0));
     let check_url = format!("https://{}/api/me/flexRouters/{}/status", bubble.clone(), ip.clone());
     let mut headers = HeaderMap::new();
     headers.insert(HEADER_BUBBLE_SESSION,   HeaderValue::from_str(session.to_string().as_str()).unwrap());

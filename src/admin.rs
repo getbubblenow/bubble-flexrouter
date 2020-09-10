@@ -93,7 +93,8 @@ pub async fn start_admin (admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
                           password_hash: String,
                           auth_token : Arc<String>,
                           ssh_priv_key : Arc<String>,
-                          ssh_pub_key : Arc<String>) {
+                          ssh_pub_key : Arc<String>,
+                          check_ssh_interval : u64) {
     let admin_sock : SocketAddr = format!("127.0.0.1:{}", admin_port).parse().unwrap();
     let ssh_container: Arc<Mutex<SshContainer>> = Arc::new(Mutex::new(SshContainer::new()));
 
@@ -110,6 +111,7 @@ pub async fn start_admin (admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
         .and(warp::any().map(move || ssh_priv_key.clone()))
         .and(warp::any().map(move || ssh_pub_key.clone()))
         .and(warp::any().map(move || ssh_container_clone.clone()))
+        .and(warp::any().map(move || check_ssh_interval))
         .and_then(handle_register));
 
     let admin_reg_clone = admin_reg.clone();
@@ -137,7 +139,8 @@ async fn handle_register(registration : AdminRegistration,
                          auth_token : Arc<String>,
                          ssh_priv_key : Arc<String>,
                          ssh_pub_key : Arc<String>,
-                         ssh_container : Arc<Mutex<SshContainer>>) -> Result<impl warp::Reply, warp::Rejection> {
+                         ssh_container : Arc<Mutex<SshContainer>>,
+                         check_ssh_interval : u64) -> Result<impl warp::Reply, warp::Rejection> {
     // validate registration
     let validated = validate_admin_registration(registration.clone());
     if validated.is_err() {
@@ -221,7 +224,8 @@ async fn handle_register(registration : AdminRegistration,
                                 internal_reg.bubble.clone(),
                                 internal_reg.session.clone(),
                                 reg_response.host_key,
-                                ssh_priv_key).await;
+                                ssh_priv_key,
+                                check_ssh_interval).await;
                             if ssh_result.is_err() {
                                 let err = ssh_result.err();
                                 if err.is_none() {
