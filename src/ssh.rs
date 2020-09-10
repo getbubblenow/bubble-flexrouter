@@ -282,6 +282,7 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
         match check_result {
             Err(e) => {
                 error!("check_ssh: error checking status via {}: {:?}", check_url, e);
+                conn_ok = false;
             },
             Ok(response) => {
                 let status_code = response.status();
