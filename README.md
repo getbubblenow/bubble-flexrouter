@@ -96,7 +96,7 @@ body will contain a plaintext string with an error message.
 
 An example using curl:
 
-    curl -v -H 'Content-Type: application/json' \
+    curl -H 'Content-Type: application/json' \
          -d '{"password":"Uy6dDwNP5msid3P6QEpeVmQMuUiAda","session":"47cc4974-2eca-47d8-8c74-c2cc106b9ba8","bubble":"nexus-dr66b-wn85d-ux27e.bubv.net","ip":"10.19.49.12"}' \
          http://127.0.0.1:9833/register
 
@@ -120,7 +120,7 @@ body will contain a plaintext string with an error message.
 
 An example using curl:
 
-    curl -v -H 'Content-Type: application/json' \
+    curl -H 'Content-Type: application/json' \
          -d '{"password":"Uy6dDwNP5msid3P6QEpeVmQMuUiAda"}' \
          http://127.0.0.1:9833/unregister
 
