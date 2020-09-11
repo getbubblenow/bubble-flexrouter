@@ -85,6 +85,9 @@ pub async fn start_proxy (dns1_ip : &str,
     debug!("start_proxy: Proxy await result: {:?}", result);
 }
 
+const PATH_PING: &'static str = "/ping";
+const PATH_HEALTH: &'static str = "/health";
+
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                gateway: Arc<String>,
                resolver: Arc<TokioAsyncResolver>,
@@ -96,7 +99,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     if host.is_none() {
         let path = uri.path();
         let method = req.method();
-        return if path.eq("/ping") && method == Method::POST {
+        return if path.eq(PATH_PING) && method == Method::POST {
             let body_bytes = hyper::body::to_bytes(req.into_body()).await?;
             let body = String::from_utf8(body_bytes.to_vec()).unwrap();
             let ping: Ping = serde_json::from_str(body.as_str()).unwrap();
@@ -110,7 +113,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                 trace!("proxy: valid ping, responding with pong: {}", pong_json);
                 Ok(Response::new(Body::from(pong_json)))
             }
-        } else if path.eq("/health") && method == Method::GET {
+        } else if path.eq(PATH_HEALTH) && method == Method::GET {
             Ok(Response::new(Body::from("proxy is alive\n")))
 
         } else {
