@@ -24,7 +24,7 @@ There are a few steps to installation:
 ## Generate the bubble-flexrouter password
 During installation, choose a password for the service. It should be random and at least 30 characters long.
 
-Store this password in securely someplace where the app can read it. Ideally this is *not* on the filesystem,
+Store this password in securely someplace where the Bubble app can read it. Ideally this is *not* on the filesystem,
 but in some internal app storage mechanism, since it will be stored in plaintext.
 
 Bcrypt the password (use 12 rounds) and store the bcrypted value in a file. This file should only be readable by
