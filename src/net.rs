@@ -8,8 +8,6 @@ use std::process::{exit, Command, Stdio};
 
 use log::{trace, info, error};
 
-use pnet::datalink;
-
 use whoami::{platform, Platform};
 
 pub fn is_valid_ip(ip : &String) -> bool {
@@ -17,21 +15,8 @@ pub fn is_valid_ip(ip : &String) -> bool {
         error!("is_valid_ip: not a private IP address: {}", ip);
         false
     } else {
-        let mut addr = None;
-        for iface in datalink::interfaces() {
-            if iface.is_loopback() { continue; }
-            if !iface.is_up() { continue; }
-            for net_ip in iface.ips {
-                if net_ip.ip().to_string().eq(ip) {
-                    addr = Some(net_ip);
-                }
-                break;
-            }
-        }
-        if addr.is_none() {
-            error!("is_valid_ip: IP address not found among network interfaces: {}", ip);
-        }
-        addr.is_some()
+        // todo: portable way to verify that the IP address is actually present on the system
+        true
     }
 }
 
