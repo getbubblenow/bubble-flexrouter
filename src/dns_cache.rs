@@ -13,7 +13,7 @@ use std::task::{self, Poll};
 
 use hyper::client::connect::dns::Name;
 
-use log::debug;
+use log::{trace, debug};
 
 use lru::LruCache;
 
@@ -59,13 +59,14 @@ pub async fn resolve_with_cache(host: &str,
     let found = (*guard).get(&host_string);
 
     if found.is_none() {
-        debug!("resolve_with_cache: host={} not in cache, resolving...", host_string);
+        trace!("resolve_with_cache: host={} not in cache, resolving...", String::from(host_string.as_str()));
         let resolved_ip = format!("{}", resolver.lookup_ip(host).await.unwrap().iter().next().unwrap());
-        (*guard).put(host_string, resolved_ip.to_string());
+        (*guard).put(String::from(host_string.as_str()), resolved_ip.to_string());
+        debug!("resolve_with_cache: resolved {} -> {}", String::from(host_string.as_str()), &resolved_ip);
         resolved_ip
     } else {
         let found = found.unwrap();
-        debug!("resolve_with_cache: host={} found in cache, returning: {}", host_string, found);
+        trace!("resolve_with_cache: host={} found in cache, returning: {}", host_string, found);
         String::from(found)
     }
 }
