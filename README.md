@@ -52,7 +52,7 @@ Install bubble-flexrouter as a system service (Windows Service or Mac OS launch 
 It should always be running. Set it to run at system startup.
 
 The user that bubble-flexrouter runs as must have sufficient privileges to add and remove IP routes from the
-system routing table. This usually means Administrator on Windows or root on Mac OS.
+system routing table. This usually means Administrator (on Windows) or root (on Mac OS).
 
 The service requires some environment variables to be set:
 
