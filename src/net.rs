@@ -136,7 +136,7 @@ pub fn create_static_route(gateway: &String, ip_string: &String) -> bool {
             Command::new("/bin/sh")
                 .stdin(Stdio::null())
                 .arg("-c")
-                .arg(format!("sudo route -n add {} {}", ip_string, gateway))
+                .arg(format!("sudo route add {} {}", ip_string, gateway))
                 .output().unwrap().stderr
         }
         Platform::Linux => {
