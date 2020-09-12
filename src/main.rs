@@ -32,6 +32,7 @@ use whoami;
 use bubble_flexrouter::admin::{AdminRegistration, start_admin};
 use bubble_flexrouter::pass::init_password;
 use bubble_flexrouter::proxy::start_proxy;
+use bubble_flexrouter::ssh::ssh_command;
 use bubble_flexrouter::util::read_required_env_var_argument;
 use bubble_flexrouter::util::read_required_env_var_argument_as_file;
 use bubble_flexrouter::util::read_path_to_string;
@@ -148,6 +149,9 @@ async fn main() {
         .init().unwrap();
 
     info!("Starting bubble-flexrouter version {} ", VERSION);
+
+    // verify ssh command exists, this will panic and exit if an ssh command cannot be found
+    ssh_command();
 
     // todo: ensure we are running as root (or Administrator on Windows)
     info!("The current user is {}", whoami::username());

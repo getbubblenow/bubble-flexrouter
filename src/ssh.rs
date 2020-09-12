@@ -4,6 +4,7 @@
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
  */
 
+use std::path::Path;
 use std::process::exit;
 use std::process::{Command, Stdio, Child};
 use std::io::Error;
@@ -25,15 +26,39 @@ use whoami::{platform, Platform};
 use crate::util::{HEADER_BUBBLE_SESSION, write_string_to_file, now_micros};
 
 const SSH_WINDOWS: &'static str = "C:\\Windows\\System32\\OpenSSH\\ssh.exe";
+const SSH_WINDOWS_CYGWIN: &'static str = "C:\\cygwin64\\bin\\ssh.exe";
 const SSH_MACOS: &'static str = "/usr/bin/ssh";
 const SSH_LINUX: &'static str = "/usr/bin/ssh";
 
 pub fn ssh_command() -> &'static str {
     let platform: Platform = platform();
     return match platform {
-        Platform::Windows => SSH_WINDOWS,
-        Platform::MacOS => SSH_MACOS,
-        Platform::Linux => SSH_LINUX,
+        Platform::Windows => {
+            if Path::new(SSH_WINDOWS).exists() {
+                SSH_WINDOWS
+            } else if Path::new(SSH_WINDOWS_CYGWIN).exists() {
+                SSH_WINDOWS_CYGWIN
+            } else {
+                error!("ssh_command: ssh executable was not found in either {} or {}", SSH_WINDOWS, SSH_WINDOWS_CYGWIN);
+                exit(2)
+            }
+        },
+        Platform::MacOS => {
+            if Path::new(SSH_MACOS).exists() {
+                SSH_MACOS
+            } else {
+                error!("ssh_command: ssh executable was not found: {}", SSH_MACOS);
+                exit(2)
+            }
+        },
+        Platform::Linux => {
+            if Path::new(SSH_LINUX).exists() {
+                SSH_LINUX
+            } else {
+                error!("ssh_command: ssh executable was not found: {}", SSH_LINUX);
+                exit(2)
+            }
+        },
         _ => {
             error!("ssh_command: unsupported platform: {:?}", platform);
             exit(2);
