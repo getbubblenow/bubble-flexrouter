@@ -18,7 +18,7 @@ one of your device's real IP addresses.
 There are a few steps to installation:
  * Generate the flex-router password
  * Create an SSH key pair
- * Create an empty auth token file
+ * Create an auth token file
  * Install system service
 
 ## Generate the bubble-flexrouter password
@@ -40,12 +40,11 @@ In the above, `/some/secure/location` should be a path that is only readable by 
 When this step is done, `/some/secure/location` should be the path to the SSH private key and
 `/some/secure/location.pub` should be the path to the SSH public key.
 
-## Create an empty auth token file
-bubble-flexrouter uses an auth token to secure its connection to a Bubble. This token is written to a file during
-registration (described below).
+## Create an auth token file
+bubble-flexrouter uses an auth token to secure its connection to a Bubble.
 
-During installation, create an empty file that is only readable/writeable by the bubble-flexrouter service.
-
+During installation, write a random token to a file. This token must be at least 50 characters long.
+After writing the file, ensure that it is only readable by the bubble-flexrouter service.
 
 ## Install system service
 Install bubble-flexrouter as a system service (Windows Service or Mac OS launch daemon) during Bubble app installation.
