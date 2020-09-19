@@ -127,7 +127,8 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
             } else {
                 let routes = remove_routes.routes.clone();
                 for route in routes.into_iter() {
-                    remove_static_route(&route);
+                    let ip_string = resolve_with_cache(route.as_str(), &resolver, resolver_cache.clone()).await;
+                    remove_static_route(&ip_string);
                 }
                 Ok(Response::new(Body::from(format!("Removed: {:?}", remove_routes.routes))))
             }
