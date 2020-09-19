@@ -147,7 +147,7 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     info!("proxy: host {} resolved to: {}", host, ip_string);
     trace!("proxy: request is {:?}", req);
 
-    if needs_static_route(&ip_string) {
+    if !static_route_exists(&ip_string) {
         if !create_static_route(&gateway, &ip_string) {
             // we MUST fail here, without a valid static route, the request would go back out
             // through the VPN interface, creating an infinite loop

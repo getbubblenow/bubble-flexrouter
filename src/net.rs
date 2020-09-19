@@ -89,7 +89,7 @@ pub fn ip_gateway() -> String {
     gateway
 }
 
-pub fn needs_static_route(ip_string: &String) -> bool {
+pub fn static_route_exists(ip_string: &String) -> bool {
     trace!("needs_static_route: checking ip={:?}", ip_string);
     let platform: Platform = platform();
     let output = match platform {
@@ -124,7 +124,7 @@ pub fn needs_static_route(ip_string: &String) -> bool {
     let data = String::from_utf8(output).unwrap();
     let mut parts = data.split_ascii_whitespace();
     let first_part = parts.next();
-    first_part.is_none() || first_part.unwrap().len() == 0
+    first_part.is_some() && first_part.unwrap().len() > 0
 }
 
 pub fn create_static_route(gateway: &String, ip_string: &String) -> bool {
@@ -168,6 +168,10 @@ pub fn create_static_route(gateway: &String, ip_string: &String) -> bool {
 }
 
 pub fn remove_static_route(ip_string: &String) -> bool {
+    if !static_route_exists(ip_string) {
+        info!("remove_static_route: route does not exist for ip={}", ip_string);
+        return true;
+    }
     info!("remove_static_route: removing ip={}", ip_string);
     let platform: Platform = platform();
     let output = match platform {
