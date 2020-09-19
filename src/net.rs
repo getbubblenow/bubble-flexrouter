@@ -47,7 +47,7 @@ pub fn is_private_ip(ip : &String) -> bool {
 
 pub fn ip_gateway() -> String {
     let platform: Platform = platform();
-    return match platform {
+    let gateway = match platform {
         Platform::Windows => {
             let output = Command::new("C:\\Windows\\System32\\cmd.exe")
                 .stdin(Stdio::null())
@@ -65,7 +65,7 @@ pub fn ip_gateway() -> String {
             let output = Command::new("/bin/sh")
                 .stdin(Stdio::null())
                 .arg("-c")
-                .arg("netstat -rn | grep -m 1 default | cut -d' ' -f2")
+                .arg("netstat -rn | grep default | awk '{print $2}' | egrep -m 1 '[[:digit:]]{1,3}\\.[[:digit:]]{1,3}\\.[[:digit:]]{1,3}\\.[[:digit:]]{1,3}'")
                 .output().unwrap().stdout;
             String::from(String::from_utf8(output).unwrap().trim())
         }
@@ -81,7 +81,12 @@ pub fn ip_gateway() -> String {
             error!("ip_gateway: unsupported platform: {:?}", platform);
             exit(2);
         }
+    };
+    if gateway.is_empty() {
+        error!("ip_gateway: gateway not found!");
+        exit(2);
     }
+    gateway
 }
 
 pub fn needs_static_route(ip_string: &String) -> bool {
@@ -177,7 +182,7 @@ pub fn remove_static_route(ip_string: &String) -> bool {
             Command::new("/bin/sh")
                 .stdin(Stdio::null())
                 .arg("-c")
-                .arg(format!("sudo route -n del {}", ip_string))
+                .arg(format!("sudo route -n delete {}", ip_string))
                 .output().unwrap().stderr
         } Platform::Linux => {
             Command::new("/bin/sh")
@@ -207,6 +212,7 @@ pub fn remove_static_route(ip_string: &String) -> bool {
 pub fn flush_static_routes() -> bool {
     info!("flush_static_routes: flushing static routes...");
     let gateway = ip_gateway();
+    trace!("flush_static_routes: finding static routes with gateway {}", gateway);
     let platform: Platform = platform();
     let output = match platform {
         Platform::Windows => {
