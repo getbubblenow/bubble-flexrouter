@@ -5,6 +5,7 @@
  */
 
 use std::process::{exit, Command, Stdio};
+use std::sync::Arc;
 
 use log::{trace, info, error};
 
@@ -198,4 +199,64 @@ pub fn remove_static_route(ip_string: &String) -> bool {
         error!("remove_static_route: error removing route to {}: {}", ip_string, data);
     }
     ok
+}
+
+// rust complains about "unused mut" in "mut parts = data.split_ascii_whitespace()"
+// but removing the "mut" causes a compilation failure
+#[allow(unused_mut)]
+pub fn flush_static_routes() -> bool {
+    info!("flush_static_routes: flushing static routes...");
+    let gateway = ip_gateway();
+    let platform: Platform = platform();
+    let output = match platform {
+        Platform::Windows => {
+            Command::new("C:\\Windows\\System32\\cmd.exe")
+                .stdin(Stdio::null())
+                .arg("/c")
+                .arg("route").arg("print")
+                .arg("|")
+                .arg("findstr").arg("/L").arg(format!("/C:\" {} \"", gateway))
+                .output().unwrap()
+        }
+        Platform::MacOS => {
+            Command::new("/bin/sh")
+                .stdin(Stdio::null())
+                .arg("-c")
+                .arg(format!("netstat -rn | grep UGHS | grep {}", gateway))
+                .output().unwrap()
+        } Platform::Linux => {
+            Command::new("/bin/sh")
+                .stdin(Stdio::null())
+                .arg("-c")
+                .arg(format!("sudo ip route show | egrep \"[[:digit:]]{{1,3}}\\.[[:digit:]]{{1,3}}\\.[[:digit:]]{{1,3}}\\.[[:digit:]]{{1,3}} via {}\"", gateway))
+                .output().unwrap()
+        }
+        _ => {
+            error!("flush_static_routes: unsupported platform: {:?}", platform);
+            exit(2);
+        }
+    };
+    if !output.stderr.is_empty() {
+        error!("flush_static_routes: error flushing: {:?}", String::from_utf8(output.stderr));
+        return false;
+    }
+    let data = String::from_utf8(output.stdout).unwrap();
+    let mut lines = data.lines();
+    let mut all_ok = true;
+    for line in lines {
+        let mut parts = line.split_ascii_whitespace();
+        let first_part = parts.next().unwrap();
+        let ip_string = Arc::new(String::from(first_part));
+        trace!("flush_static_routes: flushing route: {:?}", ip_string);
+        if !remove_static_route(&ip_string) {
+            error!("flush_static_routes: error flushing route: {:?}", ip_string);
+            all_ok = false;
+        }
+    }
+    if all_ok {
+        trace!("flush_static_routes: all static routes flushed");
+    } else {
+        error!("flush_static_routes: error flushing static routes");
+    }
+    return all_ok;
 }

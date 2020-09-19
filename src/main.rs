@@ -33,6 +33,7 @@ use bubble_flexrouter::admin::{AdminRegistration, start_admin};
 use bubble_flexrouter::pass::init_password;
 use bubble_flexrouter::proxy::start_proxy;
 use bubble_flexrouter::ssh::ssh_command;
+use bubble_flexrouter::net::flush_static_routes;
 use bubble_flexrouter::util::read_required_env_var_argument;
 use bubble_flexrouter::util::read_required_env_var_argument_as_file;
 use bubble_flexrouter::util::read_path_to_string;
@@ -208,6 +209,8 @@ async fn main() {
     let check_ssh_interval = check_ssh_interval_result.unwrap();
 
     let admin_reg: Arc<Mutex<Option<AdminRegistration>>> = Arc::new(Mutex::new(None));
+
+    flush_static_routes(); // start fresh
 
     let admin = start_admin(
         admin_reg.clone(),
