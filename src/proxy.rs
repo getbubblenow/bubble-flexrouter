@@ -143,6 +143,8 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     }
 
     let host = host.unwrap();
+    let host_string = String::from(host);
+    trace!("proxy: received request for host {:?}, resolving...", host_string);
     let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
     info!("proxy: host {} resolved to: {}", host, ip_string);
     trace!("proxy: request is {:?}", req);
