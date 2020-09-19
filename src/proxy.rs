@@ -38,6 +38,7 @@ use crate::dns_cache::*;
 use crate::net::*;
 use crate::hyper_util::bad_request;
 use crate::ping::Ping;
+use crate::remove_routes::RemoveRoutes;
 
 type HttpClient = Client<hyper_tls::HttpsConnector<HttpConnector<CacheResolver>>, hyper::Body>;
 
@@ -85,8 +86,9 @@ pub async fn start_proxy (dns1_ip : &str,
     debug!("start_proxy: Proxy await result: {:?}", result);
 }
 
-const PATH_PING: &'static str = "/ping";
-const PATH_HEALTH: &'static str = "/health";
+const PATH_PING : &'static str = "/ping";
+const PATH_REMOVE : &'static str = "/remove";
+const PATH_HEALTH : &'static str = "/health";
 
 async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                gateway: Arc<String>,
@@ -102,17 +104,34 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
         return if path.eq(PATH_PING) && method == Method::POST {
             let body_bytes = hyper::body::to_bytes(req.into_body()).await?;
             let body = String::from_utf8(body_bytes.to_vec()).unwrap();
-            let ping: Ping = serde_json::from_str(body.as_str()).unwrap();
+            let ping : Ping = serde_json::from_str(body.as_str()).unwrap();
             trace!("proxy: ping received: {:?}", ping);
             if !ping.verify(auth_token.clone()) {
-                error!("proxy: invalid ping hash");
-                bad_request("invalid ping hash\n")
+                error!("proxy(ping): invalid ping hash");
+                bad_request("(ping) invalid ping hash\n")
             } else {
                 let pong = Ping::new(auth_token.clone());
                 let pong_json = serde_json::to_string(&pong).unwrap();
                 trace!("proxy: valid ping, responding with pong: {}", pong_json);
                 Ok(Response::new(Body::from(pong_json)))
             }
+
+        } else if path.eq(PATH_REMOVE) && method == Method::POST {
+            let body_bytes = hyper::body::to_bytes(req.into_body()).await?;
+            let body = String::from_utf8(body_bytes.to_vec()).unwrap();
+            let remove_routes : RemoveRoutes = serde_json::from_str(body.as_str()).unwrap();
+            trace!("proxy: remove received: {:?}", remove_routes);
+            if !remove_routes.ping.verify(auth_token.clone()) {
+                error!("proxy(remove): invalid ping hash");
+                bad_request("(remove) invalid ping hash\n")
+            } else {
+                let routes = remove_routes.routes.clone();
+                for route in routes.into_iter() {
+                    remove_static_route(&route);
+                }
+                Ok(Response::new(Body::from(format!("Removed: {:?}", remove_routes.routes))))
+            }
+
         } else if path.eq(PATH_HEALTH) && method == Method::GET {
             Ok(Response::new(Body::from("proxy is alive\n")))
 

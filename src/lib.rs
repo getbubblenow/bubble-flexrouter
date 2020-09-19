@@ -10,6 +10,7 @@ pub mod util;
 pub mod hyper_util;
 pub mod pass;
 pub mod ping;
+pub mod remove_routes;
 pub mod net;
 pub mod ssh;
 
