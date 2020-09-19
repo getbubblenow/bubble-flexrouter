@@ -46,7 +46,7 @@ pub fn is_private_ip(ip : &String) -> bool {
 }
 
 pub fn ip_gateway() -> String {
-    let platform: Platform = platform();
+    let platform : Platform = platform();
     let gateway = match platform {
         Platform::Windows => {
             let output = Command::new("C:\\Windows\\System32\\cmd.exe")
