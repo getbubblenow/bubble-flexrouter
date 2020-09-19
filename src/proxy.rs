@@ -126,11 +126,23 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
                 bad_request("(remove) invalid ping hash\n")
             } else {
                 let routes = remove_routes.routes.clone();
+                let mut resolve_errors: Vec<(String, DnsResolveError)> = Vec::new();
                 for route in routes.into_iter() {
-                    let ip_string = resolve_with_cache(route.as_str(), &resolver, resolver_cache.clone()).await;
-                    remove_static_route(&ip_string);
+                    let resolve_result = resolve_with_cache(route.as_str(), &resolver, resolver_cache.clone()).await;
+                    if resolve_result.is_err() {
+                        let err = resolve_result.err().unwrap();
+                        error!("proxy(remove): error resolving hostname {:?}: {:?}", route.clone(), err);
+                        resolve_errors.push((route.clone(), err));
+                    } else {
+                        let ip_string = resolve_result.unwrap();
+                        remove_static_route(&ip_string);
+                    }
                 }
-                Ok(Response::new(Body::from(format!("Removed: {:?}", remove_routes.routes))))
+                if resolve_errors.is_empty() {
+                    Ok(Response::new(Body::from(format!("Removed: {:?}", remove_routes.routes))))
+                } else {
+                    bad_request(format!("(remove) resolution errors: {:?}\n", resolve_errors).as_str())
+                }
             }
 
         } else if path.eq(PATH_HEALTH) && method == Method::GET {
@@ -143,9 +155,15 @@ async fn proxy(client: Client<HttpsConnector<HttpConnector<CacheResolver>>>,
     }
 
     let host = host.unwrap();
-    let host_string = String::from(host);
-    trace!("proxy: received request for host {:?}, resolving...", host_string);
-    let ip_string = resolve_with_cache(host, &resolver, resolver_cache).await;
+    let host_string = Arc::new(String::from(host));
+    trace!("proxy: received request for host {:?}, resolving...", host_string.clone());
+    let resolve_result = resolve_with_cache(host, &resolver, resolver_cache).await;
+    if resolve_result.is_err() {
+        let err = resolve_result.err().unwrap();
+        error!("proxy: error resolving hostname {:?}: {:?}", host_string.clone(), err);
+        return bad_request(format!("Error: error resolving hostname: {:?}: {:?}\n", host_string.clone(), err).as_str());
+    }
+    let ip_string = resolve_result.unwrap();
     info!("proxy: host {} resolved to: {}", host, ip_string);
     trace!("proxy: request is {:?}", req);
 
