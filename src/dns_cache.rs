@@ -81,15 +81,17 @@ pub async fn resolve_with_cache(host: &str,
         if lookup_result.is_err() {
             let err = lookup_result.err();
             if err.is_some() {
+                error!("resolve_with_cache: DNS resolution failure for {}", String::from(host_string.as_str()));
                 Err(DnsResolveError::ResolutionFailure(err.unwrap()))
             } else {
+                error!("resolve_with_cache: unknown DNS error for {}", String::from(host_string.as_str()));
                 Err(DnsResolveError::DnsUnknownError)
             }
         } else {
             let ip_result = lookup_result.unwrap();
             let first_result = ip_result.iter().next();
             if first_result.is_none() {
-                error!("resolve_with_cache: {} - no records found", String::from(host_string.as_str()));
+                error!("resolve_with_cache: no DNS records found for {}", String::from(host_string.as_str()));
                 Err(DnsResolveError::DnsNoRecordsFound)
             } else {
                 let resolved_ip = format!("{}", first_result.unwrap());
@@ -134,7 +136,9 @@ pub async fn resolve_to_result(host: String,
                                cache: Arc<Mutex<LruCache<String, String>>>) -> Result<IpAddrs, DnsResolveError> {
     let resolve_result = resolve_with_cache(host.as_str(), &resolver, cache).await;
     if resolve_result.is_err() {
-        Err(resolve_result.err().unwrap())
+        let err = resolve_result.err().unwrap();
+        error!("resolve_to_result: error resolving {}: {}", host.as_str(), err);
+        Err(err)
     } else {
         let ip = resolve_result.unwrap();
         let ip_addr: IpAddr = ip.parse().unwrap();
