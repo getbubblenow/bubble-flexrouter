@@ -253,7 +253,7 @@ async fn check_ssh (ssh_container : Arc<Mutex<SshContainer>>,
                     session : Arc<String>,
                     check_ssh_interval : u64) -> bool {
     let mut checker = interval_at(Instant::now().checked_add(Duration::new(CHECK_SSH_START_DELAY, 0)).unwrap(), Duration::new(check_ssh_interval, 0));
-    let check_url = format!("https://{}/api/me/flexRouters/{}/status", bubble.clone(), ip.clone());
+    let check_url = format!("https://{}:1443/api/me/flexRouters/{}/status", bubble.clone(), ip.clone());
     let mut headers = HeaderMap::new();
     headers.insert(HEADER_BUBBLE_SESSION,   HeaderValue::from_str(session.to_string().as_str()).unwrap());
     let client = reqwest::Client::builder()
