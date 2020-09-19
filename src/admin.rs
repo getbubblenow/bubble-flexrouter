@@ -193,7 +193,7 @@ async fn handle_register(registration : AdminRegistration,
 
         // PUT it and see if it worked
         let client = reqwest::Client::new();
-        let url = format!("https://{}/api/me/flexRouters", internal_reg.bubble.clone());
+        let url = format!("https://{}:1443/api/me/flexRouters", internal_reg.bubble.clone());
         trace!("handle_register: registering ourself with {}, sending: {:?}", url, bubble_registration);
         let session = internal_reg.session.clone();
         match client.put(url.as_str())
