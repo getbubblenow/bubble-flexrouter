@@ -17,7 +17,7 @@ Download the latest bubble-flexrouter release:
 
   * [bubble-flexrouter for Windows](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-windows/latest/bubble-flexrouter.zip)
   * [bubble-flexrouter for Mac OS X](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/bubble-flexrouter.zip)
-  * [bubble-flexrouter Linux](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-linux/latest/bubble-flexrouter.zip)
+  * [bubble-flexrouter for Linux](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-linux/latest/bubble-flexrouter.zip)
 
 The [README](README-release.md) file found within the above release ZIP file describes how to use
 the `flex_init.sh` and `flex_register.sh` scripts to manage a flex router.
