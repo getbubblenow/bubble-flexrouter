@@ -14,7 +14,7 @@
 #                           is a bcrypted password, not a plaintext password
 #
 #   flex-password-env-var : Name of environment variable containing password to bcrypt and write to password file
-#                           Default value is BUBBLE_FR_PASS
+#                           Default value is BUBBLE_FR_PASS, or if not set, from prompt
 #                           Ignored if password file already exists and -f / --force was not specified
 #
 #   The init command will create the following files:
@@ -101,7 +101,7 @@ if [[ ${WRITE_PASS} -eq 1 ]] ; then
   fi
   BFR_PASSWORD="${!BFR_PASSWORD_VAR}"
   if [[ -z "${BFR_PASSWORD}" ]] ; then
-    die "Environment variable ${BFR_PASSWORD_VAR} was not defined or was empty"
+    read -sp "Bubble Flex Router Password: " BFR_PASSWORD
   fi
   if [[ $DO_BCRYPT -eq 1 ]] ; then
     echo "$(htpasswd -nbBC 12 USER "${BFR_PASSWORD}" | awk -F ':' '{print $2}')" > ${BFR_PASSWORD_FILE} || die "Error writing password file"

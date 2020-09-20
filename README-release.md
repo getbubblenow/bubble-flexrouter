@@ -38,14 +38,26 @@ This step only needs to be done once. After that, bubble-flexrouter will re-use 
 If you're using Windows, start by opening a Cygwin bash shell. That's what you'll use to run these commands.
 
 ### If you have htpasswd installed
-To initialize your bubble-flexrouter, set the flexrouter master password and run the init script:
+To initialize your bubble-flexrouter, run the init script:
+
+    flex_init.sh
+
+You will be prompted to enter a master password for the flex router. Remember this password.
+
+You can also set this password using an environment variable
 
     export BUBBLE_FR_PASS=some-plaintext-password
     flex_init.sh
 
+The above command will read the password from the `BUBBLE_FR_PASS` environment variable and will not
+prompt for a password.
+
 ### If you don't have htpasswd installed
 If you don't have `htpasswd` on your system, then you will need to manually bcrypt the password.
 You can do this online at https://bcrypt-generator.com/
+
+Then set the `BUBBLE_FR_PASS` environment variable to the bcrypted password and
+run `flex_init.sh` with the `--bcrypt` flag:
 
     export BUBBLE_FR_PASS=some-bcrypted-password
     flex_init.sh --bcrypt
@@ -54,7 +66,20 @@ You can do this online at https://bcrypt-generator.com/
 Start the Bubble app and login. On Linux, run `wg-quick up wg0` to connect.
 
 ## Running Flex Router
-Then run:
+You'll need to run this as root on Linux/MacOS or Administrator on Windows.
+
+#### Set Environment
+Set environment variables required to run the flex router.
+
+These default should work, where `${HOME}` is the home directory of the user who ran `flex_init.sh`:
+
+    export BUBBLE_FR_SSH_KEY=${HOME}/.ssh/flex
+    export BUBBLE_FR_PASS=${HOME}/.bfr_pass
+    export BUBBLE_FR_TOKEN=${HOME}/.bfr_token
+
+On Windows, replace `export` with `set` if you are using the standard Windows `cmd` program.
+
+#### Run the router
 
     bubble-flexrouter
 
@@ -63,6 +88,19 @@ To see all available options:
     bubble-flexrouter --help
 
 ## Register the flex router with your Bubble
+This step can be done as a regular user (non-root, non-Administrator).
+
+#### Set Environment
+You will need to set the `BUBBLE_FR_PASS` environment variable to register your router.
+
+Unlike `flex_init.sh` (where this environment variable points to the file containing the bcrypted password),
+when you run `flex_register.sh` this environment variable should contain the actual plaintext password.
+
+    export BUBBLE_FR_PASS=the-password-you-used-when-running-flex_init.sh
+
+On Windows, replace `export` with `set` if you are using the standard Windows `cmd` program.
+
+#### Register the router
 Run:
 
     flex_register.sh your-bubble-hostname.example.com
