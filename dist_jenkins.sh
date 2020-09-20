@@ -26,6 +26,13 @@ RELEASE_TOP="~jenkins/public/public/releases/bubble-flexrouter/${FLEX_PROJECT}/"
 RELEASE_DIR="${RELEASE_TOP}/${LATEST_VERSION}"
 
 mkdir -p ${RELEASE_DIR} || die "Error creating release dir: ${RELEASE_DIR}"
+echo "Created release dir: ${RELEASE_DIR}"
+
 cp ${LATEST_ZIP} ${RELEASE_DIR} || die "Error copying ${LATEST_ZIP} -> ${RELEASE_DIR}"
+echo "Published release: ${RELEASE_DIR}/$(basename ${LATEST_ZIP})"
+
 echo ${LATEST_VERSION} > ${RELEASE_TOP}/latest.txt
+echo "Marked as latest release: ${RELEASE_TOP}/latest.txt == $(cat ${RELEASE_TOP}/latest.txt)"
+
 cd ${RELEASE_TOP} && rm -f latest && ln -s $(basename ${RELEASE_DIR}) latest
+echo "Marked as latest release: ${RELEASE_TOP}/latest -> $(basename ${RELEASE_DIR})"
