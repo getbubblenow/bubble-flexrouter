@@ -26,6 +26,8 @@ use trust_dns_resolver::TokioAsyncResolver;
 use trust_dns_resolver::config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts};
 use trust_dns_resolver::error::{ResolveError};
 
+use whoami::{platform, Platform};
+
 #[derive(Debug)]
 pub enum DnsResolveError {
     ResolutionFailure (ResolveError),
@@ -43,28 +45,38 @@ impl std::fmt::Display for DnsResolveError {
 impl std::error::Error for DnsResolveError {}
 
 pub async fn create_resolver(dns1_sock: SocketAddr, dns2_sock: SocketAddr) -> TokioAsyncResolver {
-    let mut resolver_config: ResolverConfig = ResolverConfig::new();
-
-    resolver_config.add_name_server(NameServerConfig {
-        socket_addr: dns1_sock,
-        protocol: Protocol::Udp,
-        tls_dns_name: None
-    });
-    resolver_config.add_name_server(NameServerConfig {
-        socket_addr: dns1_sock,
-        protocol: Protocol::Tcp,
-        tls_dns_name: None
-    });
-    resolver_config.add_name_server(NameServerConfig {
-        socket_addr: dns2_sock,
-        protocol: Protocol::Udp,
-        tls_dns_name: None
-    });
-    resolver_config.add_name_server(NameServerConfig {
-        socket_addr: dns2_sock,
-        protocol: Protocol::Tcp,
-        tls_dns_name: None
-    });
+    let platform: Platform = platform();
+    let resolver_config = match platform {
+        Platform::Windows => ResolverConfig::cloudflare_tls(),
+        _ => {
+            let mut config: ResolverConfig = ResolverConfig::new();
+            config.add_name_server(NameServerConfig {
+                socket_addr: dns1_sock,
+                protocol: Protocol::Udp,
+                tls_dns_name: None,
+                tls_config: None
+            });
+            config.add_name_server(NameServerConfig {
+                socket_addr: dns1_sock,
+                protocol: Protocol::Tcp,
+                tls_dns_name: None,
+                tls_config: None
+            });
+            config.add_name_server(NameServerConfig {
+                socket_addr: dns2_sock,
+                protocol: Protocol::Udp,
+                tls_dns_name: None,
+                tls_config: None
+            });
+            config.add_name_server(NameServerConfig {
+                socket_addr: dns2_sock,
+                protocol: Protocol::Tcp,
+                tls_dns_name: None,
+                tls_config: None
+            });
+            config
+        }
+    };
     TokioAsyncResolver::tokio(resolver_config, ResolverOpts::default()).await.unwrap()
 }
 

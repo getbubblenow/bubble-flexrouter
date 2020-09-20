@@ -86,21 +86,40 @@ pub fn ip_gateway() -> String {
         error!("ip_gateway: gateway not found!");
         exit(2);
     }
+    trace!("ip_gateway: found gateway: {:?}", gateway);
     gateway
 }
 
 pub fn static_route_exists(ip_string: &String) -> bool {
-    trace!("needs_static_route: checking ip={:?}", ip_string);
-    let platform: Platform = platform();
+    trace!("static_route_exists: checking ip={:?}", ip_string);
+    let platform : Platform = platform();
     let output = match platform {
         Platform::Windows => {
-            Command::new("C:\\Windows\\System32\\cmd.exe")
+            let raw_out = Command::new("route")
                 .stdin(Stdio::null())
-                .arg("/c")
-                .arg("route").arg("print").arg(ip_string)
-                .arg("|")
-                .arg("findstr").arg("/L").arg("/C:\"Network Destination\"")
-                .output().unwrap().stdout
+                .arg("print")
+                .arg(ip_string)
+                .output().unwrap().stdout;
+            let raw_string_out = String::from_utf8(raw_out);
+            if raw_string_out.is_ok() {
+                let mut found_line = Vec::new();
+                let raw_string = raw_string_out.unwrap();
+                for line in raw_string.lines().into_iter() {
+                    if line.contains("Network Destination") {
+                        found_line = line.as_bytes().to_vec();
+                        break;
+                    }
+                }
+                found_line
+            } else {
+                let err = raw_string_out.err();
+                if err.is_some() {
+                    trace!("static_route_exists: route command failed: {:?}", err.unwrap());
+                } else {
+                    error!("static_route_exists: route command failed, unknown error");
+                }
+                Vec::new()
+            }
         }
         Platform::MacOS => {
             Command::new("/bin/sh")
@@ -117,7 +136,7 @@ pub fn static_route_exists(ip_string: &String) -> bool {
                 .output().unwrap().stdout
         }
         _ => {
-            error!("needs_static_route: unsupported platform: {:?}", platform);
+            error!("static_route_exists: unsupported platform: {:?}", platform);
             exit(2);
         }
     };
@@ -132,10 +151,9 @@ pub fn create_static_route(gateway: &String, ip_string: &String) -> bool {
     let platform: Platform = platform();
     let output = match platform {
         Platform::Windows => {
-            Command::new("C:\\Windows\\System32\\cmd.exe")
+            Command::new("route")
                 .stdin(Stdio::null())
-                .arg("/c")
-                .arg("route").arg("add").arg(ip_string).arg(gateway)
+                .arg("add").arg(ip_string).arg(gateway)
                 .output().unwrap().stderr
         }
         Platform::MacOS => {
@@ -176,10 +194,9 @@ pub fn remove_static_route(ip_string: &String) -> bool {
     let platform: Platform = platform();
     let output = match platform {
         Platform::Windows => {
-            Command::new("C:\\Windows\\System32\\cmd.exe")
+            Command::new("route")
                 .stdin(Stdio::null())
-                .arg("/c")
-                .arg("route").arg("del").arg(ip_string)
+                .arg("delete").arg(ip_string)
                 .output().unwrap().stderr
         }
         Platform::MacOS => {
@@ -220,44 +237,59 @@ pub fn flush_static_routes() -> bool {
     let platform: Platform = platform();
     let output = match platform {
         Platform::Windows => {
-            Command::new("C:\\Windows\\System32\\cmd.exe")
+            let raw_out = Command::new("route")
                 .stdin(Stdio::null())
-                .arg("/c")
-                .arg("route").arg("print")
-                .arg("|")
-                .arg("findstr").arg("/L").arg(format!("/C:\" {} \"", gateway))
-                .output().unwrap()
+                .arg("print")
+                .output().unwrap().stdout;
+            let raw_string_out = String::from_utf8(raw_out);
+            let mut found_lines = Vec::new();
+            if raw_string_out.is_ok() {
+                let raw_string = raw_string_out.unwrap();
+                for line in raw_string.lines().into_iter() {
+                    if line.contains(&gateway) && !line.contains("0.0.0.0") {
+                        let mut parts = line.split_ascii_whitespace();
+                        let first_part = parts.next().unwrap();
+                        if !first_part.ends_with(".255") {
+                            found_lines.append(&mut line.as_bytes().to_vec());
+                        }
+                    }
+                }
+            } else {
+                let err = raw_string_out.err();
+                if err.is_some() {
+                    trace!("flush_static_routes: route command failed: {:?}", err.unwrap());
+                } else {
+                    error!("flush_static_routes: route command failed, unknown error");
+                }
+            }
+            found_lines
         }
         Platform::MacOS => {
             Command::new("/bin/sh")
                 .stdin(Stdio::null())
                 .arg("-c")
                 .arg(format!("netstat -rn | grep UGHS | grep {}", gateway))
-                .output().unwrap()
+                .output().unwrap().stdout
         } Platform::Linux => {
             Command::new("/bin/sh")
                 .stdin(Stdio::null())
                 .arg("-c")
                 .arg(format!("sudo ip route show | egrep \"[[:digit:]]{{1,3}}\\.[[:digit:]]{{1,3}}\\.[[:digit:]]{{1,3}}\\.[[:digit:]]{{1,3}} via {}\"", gateway))
-                .output().unwrap()
+                .output().unwrap().stdout
         }
         _ => {
             error!("flush_static_routes: unsupported platform: {:?}", platform);
             exit(2);
         }
     };
-    if !output.stderr.is_empty() {
-        error!("flush_static_routes: error flushing: {:?}", String::from_utf8(output.stderr));
-        return false;
-    }
-    let data = String::from_utf8(output.stdout).unwrap();
+    let data = String::from_utf8(output).unwrap();
     let mut lines = data.lines();
     let mut all_ok = true;
     for line in lines {
         let mut parts = line.split_ascii_whitespace();
         let first_part = parts.next().unwrap();
         let ip_string = Arc::new(String::from(first_part));
-        trace!("flush_static_routes: flushing route: {:?}", ip_string);
+        info!("flush_static_routes: flushing route: {:?}", ip_string);
         if !remove_static_route(&ip_string) {
             error!("flush_static_routes: error flushing route: {:?}", ip_string);
             all_ok = false;

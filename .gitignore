@@ -1,3 +1,4 @@
 /target
 .idea
 src/version.rs.orig
+build

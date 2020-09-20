@@ -231,7 +231,9 @@ fn host_addr(uri: &http::Uri, ip: &String) -> Option<SocketAddr> {
 // the upgraded connection
 async fn tunnel(upgraded: Upgraded, addr: SocketAddr) -> std::io::Result<()> {
     // Connect to remote server
+    trace!("tunnel: connecting to {:?}", addr);
     let mut server = TcpStream::connect(addr).await?;
+    trace!("tunnel: connected to {:?}", addr);
 
     // Proxying data
     let amounts = {

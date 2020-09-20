@@ -1,6 +1,5 @@
 bubble-flexrouter
 =================
-
 bubble-flexrouter provides HTTP/HTTPS proxy services for Bubble.
 
 Some websites and apps refuse to respond to requests originating from a cloud IP address.
@@ -13,6 +12,12 @@ will be sent.
 Note that using flex routing does remove some privacy protection - sites and apps that are flex-routed will see
 one of your device's real IP addresses.
 
+# The Easy Way
+The [README-release](README-release.md) file describes how to use the `flex_init.sh` and `flex_register.sh` scripts
+to manage a flex router. Try to use these first.
+
+The instructions that follow below describe more low-level means of initializing and registering a flex router
+and are intended for software developers.
 
 # Installation
 There are a few steps to installation:
@@ -91,7 +96,7 @@ Where:
   * `<password>` is the bubble-flexrouter password that was generated during installation
   * `<session-token>` is the session token returned when the used logged in (usually from the `auth/login` API call)
   * `<bubble-hostname>` is the hostname of the Bubble that the app has connected to
-  * `<client-vpn-ip>` is the VPN IP address that was assigned to the device (usually starts with `10.`)
+  * `<client-vpn-ip>` is the VPN IP address that was assigned to the device (usually starts with `10.19.`)
 
 A successful registration request will return HTTP status 200. Any other response indicates a failure, and the response
 body will contain a plaintext string with an error message.

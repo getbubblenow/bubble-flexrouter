@@ -27,7 +27,7 @@ sha2 = "0.9.1"
 stderrlog = "0.4.3"
 tokio = { version = "0.2.22", features = ["full"] }
 tower = "0.3.1"
-trust-dns-resolver = "0.19.5"
+trust-dns-resolver = { version = "0.19.5", features = ["dns-over-rustls"] }
 warp = "0.2.5"
 whoami = "0.9.0"
 
