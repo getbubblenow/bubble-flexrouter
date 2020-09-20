@@ -61,7 +61,7 @@ cd ${THISDIR} && \
   cd build && zip -D -X -r ${FLEX_DIST} bubble-flexrouter
   cat ${FLEX_DIST} | sha256sum | cut -f1 -d' ' | tr -d '\n' > ${FLEX_DIST}.sha256
 
-if [[ ${MAKE_SYMLINKS} -eq 0 ]] ; then
+if [[ ${MAKE_SYMLINKS} -eq 1 ]] ; then
   if [[ ${IS_DEV} -eq 0 ]] ; then
     ln -s ${FLEX_DIST} ${FLEX_DIST_DIR}/bubble-flexrouter.zip
     cd ${FLEX_DIST_TOP} && rm -f latest && ln -sf ${BUBBLE_VERSION} latest
