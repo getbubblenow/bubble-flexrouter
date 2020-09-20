@@ -28,4 +28,4 @@ RELEASE_DIR="${RELEASE_TOP}/${LATEST_VERSION}"
 mkdir -p ${RELEASE_DIR} || die "Error creating release dir: ${RELEASE_DIR}"
 cp ${LATEST_ZIP} ${RELEASE_DIR} || die "Error copying ${LATEST_ZIP} -> ${RELEASE_DIR}"
 echo ${LATEST_VERSION} > ${RELEASE_TOP}/latest.txt
-cd ${RELEASE_TOP} && rm latest && ln -s $(basename ${RELEASE_DIR}) latest
+cd ${RELEASE_TOP} && rm -f latest && ln -s $(basename ${RELEASE_DIR}) latest
