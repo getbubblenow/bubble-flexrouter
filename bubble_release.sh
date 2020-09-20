@@ -57,6 +57,7 @@ cd ${THISDIR} && \
   cp README-release.md ${BUILD_DIR}/README.md && \
   cp flex_init.sh ${BUILD_DIR} && \
   cp flex_register.sh ${BUILD_DIR} && \
+  echo "Building zip: ${FLEX_DIST}" && \
   cd build && zip -D -X -r ${FLEX_DIST} bubble-flexrouter
   cat ${FLEX_DIST} | sha256sum | cut -f1 -d' ' | tr -d '\n' > ${FLEX_DIST}.sha256
 
