@@ -10,18 +10,21 @@ case "$(uname -a | awk '{print $1}')" in
     if [[ -z "${BUBBLE_DIST_HOME}" ]] ; then
       BUBBLE_DIST_HOME=${1:?no BUBBLE_DIST_HOME provided}
       MAKE_SYMLINKS=1
+      SHA_CMD="sha256sum"
     fi
     ;;
   Darwin*)
     BUBBLE_DIST_HOME=${THISDIR}/dist
     rm -rf ${BUBBLE_DIST_HOME}/*
     MAKE_SYMLINKS=0
+    SHA_CMD="shasum -a 256"
     ;;
   CYGWIN*)
     export PATH=${PATH}:/cygdrive/c/cygwin64/bin
     BUBBLE_DIST_HOME=${THISDIR}/dist
     rm -rf ${BUBBLE_DIST_HOME}/*
     MAKE_SYMLINKS=0
+    SHA_CMD="sha256sum"
     ;;
 esac
 
@@ -59,7 +62,7 @@ cd ${THISDIR} && \
   cp flex_register.sh ${BUILD_DIR} && \
   echo "Building zip: ${FLEX_DIST}" && \
   cd build && zip -D -X -r ${FLEX_DIST} bubble-flexrouter
-  cat ${FLEX_DIST} | sha256sum | cut -f1 -d' ' | tr -d '\n' > ${FLEX_DIST}.sha256
+  cat ${FLEX_DIST} | ${SHA_CMD} | cut -f1 -d' ' | tr -d '\n' > ${FLEX_DIST}.sha256
 
 if [[ ${MAKE_SYMLINKS} -eq 1 ]] ; then
   if [[ ${IS_DEV} -eq 0 ]] ; then

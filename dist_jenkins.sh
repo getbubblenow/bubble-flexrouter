@@ -31,6 +31,7 @@ mkdir -p ${RELEASE_DIR} || die "Error creating release dir: ${RELEASE_DIR}"
 echo "Created release dir: ${RELEASE_DIR}"
 
 cp ${LATEST_ZIP} ${RELEASE_DIR} || die "Error copying ${LATEST_ZIP} -> ${RELEASE_DIR}"
+cp ${LATEST_ZIP}.sha256 ${RELEASE_DIR} || die "Error copying ${LATEST_ZIP}.sha256 -> ${RELEASE_DIR}"
 echo "Published release: ${RELEASE_DIR}/$(basename ${LATEST_ZIP})"
 
 echo ${LATEST_VERSION} > ${RELEASE_TOP}/latest.txt
