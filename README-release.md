@@ -54,7 +54,7 @@ prompt for a password.
 
 ### If you don't have htpasswd installed
 If you don't have `htpasswd` on your system, then you will need to manually bcrypt the password.
-You can do this online at https://bcrypt-generator.com/
+You can do this online at https://bcrypt-generator.com/ -- ensure that "Rounds" is set to 12.
 
 Then set the `BUBBLE_FR_PASS` environment variable to the bcrypted password and
 run `flex_init.sh` with the `--bcrypt` flag:
