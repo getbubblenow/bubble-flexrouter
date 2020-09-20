@@ -126,6 +126,14 @@ To get the IP address of your Bubble on Linux, run:
 
     cat /etc/wireguard/wg0.conf | grep Endpoint | awk -F':' '{print $1}' | awk '{print $NF}'
 
-## Restarting bubble-flexrouter
-Every time you start bubble-flexrouter, you need to run `flex_register.sh` to register the router
-with your Bubble.
+## Running the router
+You can sit back and let the router do its work. It will periodically check to make sure that its
+secure tunnel to the Bubble is OK. If it finds and problems, it will re-establish the tunnel.
+
+On the other side, your Bubble will be monitoring the router to ensure it is available and properly functioning.
+
+## Re-register every time your start bubble-flexrouter 
+**Every time** you start the `bubble-flexrouter`, you need to register it with your Bubble using `flex_register.sh`
+
+If you start `bubble-flexrouter` and never run `flex_register.sh`, then your Bubble will not know the router is
+available and it will not be used for flex routing.
