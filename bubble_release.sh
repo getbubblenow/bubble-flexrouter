@@ -5,6 +5,21 @@ if [[ -z "${JOB_NAME}" ]] ; then
 fi
 THISDIR=$(cd $(dirname ${0}) && pwd)
 
+case "$(uname -a | awk '{print $1}')" in
+  Linux*)
+    if [[ -z "${BUBBLE_DIST_HOME}" ]] ; then
+      BUBBLE_DIST_HOME=${1:?no BUBBLE_DIST_HOME provided}
+    fi
+    ;;
+  Darwin*)
+    BUBBLE_DIST_HOME=${THISDIR}/dist
+    ;;
+  CYGWIN*)
+    export PATH=${PATH}:/cygdrive/c/cygwin64/bin
+    BUBBLE_DIST_HOME=${THISDIR}/dist
+    ;;
+esac
+
 IS_DEV=0
 if [[ -z ${BUILD_NUMBER} ]] ; then
   BUILD_NUMBER="dev"
@@ -16,10 +31,6 @@ if [[ -z ${BASE_VERSION} ]] ; then
   exit 1
 fi
 BUBBLE_VERSION=${BASE_VERSION}.${BUILD_NUMBER}
-
-if [[ -z "${BUBBLE_DIST_HOME}" ]] ; then
-  BUBBLE_DIST_HOME=${1:?no BUBBLE_DIST_HOME provided}
-fi
 
 FLEX_DIST_TOP=${BUBBLE_DIST_HOME}/releases/bubble-flexrouter/${JOB_NAME}
 FLEX_BINARY=$(find ${THISDIR}/target/release -type f -name "bubble-flexrouter*" | grep -v "bubble-flexrouter.d" | head -1)
