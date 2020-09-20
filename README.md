@@ -13,11 +13,23 @@ Note that using flex routing does remove some privacy protection - sites and app
 one of your device's real IP addresses.
 
 # The Easy Way
-The [README-release](README-release.md) file describes how to use the `flex_init.sh` and `flex_register.sh` scripts
-to manage a flex router. Try to use these first.
+Download the latest bubble-flexrouter release:
 
-The instructions that follow below describe more low-level means of initializing and registering a flex router
+  * [bubble-flexrouter for Windows](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-windows/latest/bubble-flexrouter.zip)
+  * [bubble-flexrouter for Mac OS X](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/bubble-flexrouter.zip)
+  * [bubble-flexrouter Linux](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-linux/latest/bubble-flexrouter.zip)
+
+The [README](README-release.md) file found within the above release ZIP file describes how to use
+the `flex_init.sh` and `flex_register.sh` scripts to manage a flex router.
+These scripts make managing a flex router much easier than what is described here.
+
+The instructions below describe the low-level way to initialize and register a flex router
 and are intended for software developers.
+
+# Build bubble-flexrouter
+Follow the [build instructions](BUILD.md) to build the bubble-flexrouter binary.
+
+On Windows, follow the [Windows build instructions](BUILD-windows.md).
 
 # Installation
 There are a few steps to installation:
