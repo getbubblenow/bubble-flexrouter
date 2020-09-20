@@ -31,8 +31,8 @@ You can skip this step if you have a pre-built binary from one of the above ZIP 
 
 If you want to build from source:
 
- * Follow the [build instructions](BUILD.md) to build the bubble-flexrouter binary.
- * or, on Windows, follow the [Windows build instructions](BUILD-windows.md).
+ * Follow the [build instructions](BUILD.md) to build the bubble-flexrouter binary
+ * or, on Windows, follow the [Windows build instructions](BUILD-windows.md)
 
 # Installation
 There are a few steps to installation:
