@@ -84,9 +84,15 @@ replace `export` with `set` and `${HOME}` with `C:\cygwin64\home\<username>`
 where `<username>` is the name of the user who ran `flex_init.sh`
 
 #### Run the router
-Now that you have your environment variable set, you can run the router:
+Now that you have your environment variable set, you can run the router.
 
-    bubble-flexrouter
+On Linux and Mac OS:
+
+    sudo bubble-flexrouter
+
+On Windows, use `runas` to run `bubble-flexrouter` as Administrator:
+
+    runas /user:domainname\username bubble-flexrouter
 
 To see all available options:
 
