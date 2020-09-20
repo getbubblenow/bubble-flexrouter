@@ -129,7 +129,7 @@ async fn main() {
             .long("log-level")
             .value_name("LOG_LEVEL")
             .help("set the log level: off, error, warn, info, debug, trace")
-            .default_value("warn")
+            .default_value("info")
             .takes_value(true))
         .get_matches();
 
