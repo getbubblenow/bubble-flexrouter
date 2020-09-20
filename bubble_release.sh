@@ -35,7 +35,7 @@ BUBBLE_VERSION=${BASE_VERSION}.${BUILD_NUMBER}
 FLEX_DIST_TOP=${BUBBLE_DIST_HOME}/releases/bubble-flexrouter/${JOB_NAME}
 FLEX_BINARY=$(find ${THISDIR}/target/release -type f -name "bubble-flexrouter*" | grep -v "bubble-flexrouter.d" | head -1)
 if [[ -z "${FLEX_BINARY}" ]] ; then
-  echo "No binary found in target/release"
+  echo "No binary found in ${THISDIR}/target/release"
   exit 1
 fi
 
