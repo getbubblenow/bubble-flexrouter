@@ -29,9 +29,22 @@ function die {
   exit 1
 }
 
+case "$(uname -a | awk '{print $1}')" in
+  Linux*)
+    if [[ -z "${BUBBLE_DIST_HOME}" ]] ; then
+      SHA_CMD="sha256sum"
+    fi
+    ;;
+  Darwin*)
+    SHA_CMD="shasum -a 256"
+    ;;
+  CYGWIN*)
+    SHA_CMD="sha256sum"
+    ;;
+esac
+
 function rand_string() {
-  LEN=${1:-50}
-  cat /dev/random | strings | tr -d [[:space:]] | head -c ${LEN}
+  cat /dev/random | strings | head -c 1000 | ${SHA_CMD}
 }
 
 function write_ssh_key() {
@@ -48,7 +61,7 @@ echo "Initializing flex-router"
 FORCE=0
 DO_BCRYPT=1
 
-while [[ ! -z "${1}" && ${1} == -* ]] ; then
+while [[ ! -z "${1}" && ${1} == -* ]] ; do
   if [[ ${1} == "--force" || ${1} == "-f" ]] ; then
     FORCE=1
     shift
@@ -116,10 +129,12 @@ if [[ -s ${BFR_SSH_KEY_FILE} ]] ; then
   if [[ ${FORCE} -eq 0 ]] ; then
     echo "SSH key file exists, not overwriting: ${BFR_SSH_KEY_FILE}"
   else
+    echo "SSH key file exists but -f / --force was set, overwriting: ${BFR_SSH_KEY_FILE}"
     rm -f ${BFR_SSH_KEY_FILE} ${BFR_SSH_KEY_FILE}.pub || die "Error removing existing key file: ${BFR_SSH_KEY_FILE} and ${BFR_SSH_KEY_FILE}.pub"
     write_ssh_key ${BFR_SSH_KEY_FILE}
   fi
 else
+  echo "SSH key file not found or empty, creating: ${BFR_SSH_KEY_FILE}"
   write_ssh_key ${BFR_SSH_KEY_FILE}
 fi
 
