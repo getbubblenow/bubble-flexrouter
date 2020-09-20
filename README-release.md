@@ -35,6 +35,8 @@ We'll walk through each of these steps next.
 ## Initialize the flex router
 This step only needs to be done once. After that, bubble-flexrouter will re-use the initialization settings.
 
+On Mac OS and Linux, start by opening a Terminal window.
+
 If you're using Windows, start by opening a Cygwin bash shell. That's what you'll use to run these commands.
 
 ### If you have htpasswd installed
@@ -66,20 +68,23 @@ run `flex_init.sh` with the `--bcrypt` flag:
 Start the Bubble app and login. On Linux, run `wg-quick up wg0` to connect.
 
 ## Running Flex Router
-You'll need to run this as root on Linux/MacOS or Administrator on Windows.
+You'll need to run `bubble-flexrouter` as root (on Linux/MacOS) or Administrator (on Windows).
 
 #### Set Environment
 Set environment variables required to run the flex router.
 
-These default should work, where `${HOME}` is the home directory of the user who ran `flex_init.sh`:
+These defaults should work, where `${HOME}` is the home directory of the user who ran `flex_init.sh`:
 
     export BUBBLE_FR_SSH_KEY=${HOME}/.ssh/flex
     export BUBBLE_FR_PASS=${HOME}/.bfr_pass
     export BUBBLE_FR_TOKEN=${HOME}/.bfr_token
 
-On Windows, replace `export` with `set` if you are using the standard Windows `cmd` program.
+On Windows, if you are using the standard Windows `cmd` program,
+replace `export` with `set` and `${HOME}` with `C:\cygwin64\home\<username>`
+where `<username>` is the name of the user who ran `flex_init.sh`
 
 #### Run the router
+Now that you have your environment variable set, you can run the router:
 
     bubble-flexrouter
 
