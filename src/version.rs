@@ -4,4 +4,4 @@
  * For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
  */
 
-pub const VERSION: &'static str = "1.0.0.DEV_BUILD";
+pub const VERSION: &'static str = "FLEX_VERSION.DEV_BUILD";
