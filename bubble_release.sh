@@ -14,11 +14,13 @@ case "$(uname -a | awk '{print $1}')" in
     ;;
   Darwin*)
     BUBBLE_DIST_HOME=${THISDIR}/dist
+    rm -rf ${BUBBLE_DIST_HOME}/*
     MAKE_SYMLINKS=0
     ;;
   CYGWIN*)
     export PATH=${PATH}:/cygdrive/c/cygwin64/bin
     BUBBLE_DIST_HOME=${THISDIR}/dist
+    rm -rf ${BUBBLE_DIST_HOME}/*
     MAKE_SYMLINKS=0
     ;;
 esac
