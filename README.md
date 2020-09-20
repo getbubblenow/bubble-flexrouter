@@ -27,9 +27,12 @@ The instructions below describe the low-level way to initialize and register a f
 and are intended for software developers.
 
 # Build bubble-flexrouter
-Follow the [build instructions](BUILD.md) to build the bubble-flexrouter binary.
+You can skip this step if you have a pre-built binary from one of the above ZIP files.
 
-On Windows, follow the [Windows build instructions](BUILD-windows.md).
+If you want to build from source:
+
+ * Follow the [build instructions](BUILD.md) to build the bubble-flexrouter binary.
+ * or, on Windows, follow the [Windows build instructions](BUILD-windows.md).
 
 # Installation
 There are a few steps to installation:
