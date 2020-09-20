@@ -9,14 +9,17 @@ case "$(uname -a | awk '{print $1}')" in
   Linux*)
     if [[ -z "${BUBBLE_DIST_HOME}" ]] ; then
       BUBBLE_DIST_HOME=${1:?no BUBBLE_DIST_HOME provided}
+      MAKE_SYMLINKS=1
     fi
     ;;
   Darwin*)
     BUBBLE_DIST_HOME=${THISDIR}/dist
+    MAKE_SYMLINKS=0
     ;;
   CYGWIN*)
     export PATH=${PATH}:/cygdrive/c/cygwin64/bin
     BUBBLE_DIST_HOME=${THISDIR}/dist
+    MAKE_SYMLINKS=0
     ;;
 esac
 
@@ -39,7 +42,7 @@ if [[ -z "${FLEX_BINARY}" ]] ; then
   exit 1
 fi
 
-FLEX_DIST=${FLEX_DIST_TOP}/${BUBBLE_VERSION}/bubble-flexrouter.zip
+FLEX_DIST=${FLEX_DIST_TOP}/${BUBBLE_VERSION}/bubble-flexrouter-${BUBBLE_VERSION}.zip
 FLEX_DIST_DIR="$(dirname ${FLEX_DIST})"
 if [[ ! -d "${FLEX_DIST_DIR}" ]] ; then
   mkdir -p ${FLEX_DIST_DIR}
@@ -55,7 +58,10 @@ cd ${THISDIR} && \
   cd build && zip -D -X -r ${FLEX_DIST} bubble-flexrouter
   cat ${FLEX_DIST} | sha256sum | cut -f1 -d' ' | tr -d '\n' > ${FLEX_DIST}.sha256
 
-if [[ ${IS_DEV} -eq 0 ]] ; then
-  cd ${FLEX_DIST_TOP} && rm -f latest && ln -sf ${BUBBLE_VERSION} latest
-  echo "${BUBBLE_VERSION}" > latest.txt
+if [[ ${MAKE_SYMLINKS} -eq 0 ]] ; then
+  if [[ ${IS_DEV} -eq 0 ]] ; then
+    ln -s ${FLEX_DIST} ${FLEX_DIST_DIR}/bubble-flexrouter.zip
+    cd ${FLEX_DIST_TOP} && rm -f latest && ln -sf ${BUBBLE_VERSION} latest
+    echo "${BUBBLE_VERSION}" > latest.txt
+  fi
 fi
