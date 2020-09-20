@@ -42,7 +42,7 @@ if [[ -z "${FLEX_BINARY}" ]] ; then
   exit 1
 fi
 
-FLEX_DIST=${FLEX_DIST_TOP}/${BUBBLE_VERSION}/bubble-flexrouter-${BUBBLE_VERSION}.zip
+FLEX_DIST=${FLEX_DIST_TOP}/${BUBBLE_VERSION}/bubble-flexrouter.zip
 FLEX_DIST_DIR="$(dirname ${FLEX_DIST})"
 if [[ ! -d "${FLEX_DIST_DIR}" ]] ; then
   mkdir -p ${FLEX_DIST_DIR}
