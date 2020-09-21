@@ -101,16 +101,6 @@ To see all available options:
 ## Register the flex router with your Bubble
 This step can be done as a regular user (non-root, non-Administrator).
 
-#### Set Environment
-You will need to set the `BUBBLE_FR_PASS` environment variable to register your router.
-
-Unlike `flex_init.sh` (where this environment variable points to the file containing the bcrypted password),
-when you run `flex_register.sh` this environment variable should contain the actual plaintext password.
-
-    export BUBBLE_FR_PASS=the-password-you-used-when-running-flex_init.sh
-
-On Windows, replace `export` with `set` if you are using the standard Windows `cmd` program.
-
 #### Register the router
 Run:
 
@@ -125,6 +115,25 @@ On Linux, the hostname is not easily accessible, but you can use the IP address 
 To get the IP address of your Bubble on Linux, run:
 
     cat /etc/wireguard/wg0.conf | grep Endpoint | awk -F':' '{print $1}' | awk '{print $NF}'
+
+#### Using Environment Variable to Register
+When you run `flex_register.sh`, you'll be prompted for your flex router password, your Bubble account email,
+and your Bubble account password.
+
+If you don't want to enter these every time, you can set environment variables instead.
+
+Set the `BUBBLE_FR_PASS` environment variable to the actual plaintext password for your flex router.
+This is what you used when running `flex_init.sh` to set up the router.
+
+Set the `BUBBLE_USER` and `BUBBLE_PASS` environment variables to your Bubble account email and password.
+
+For example:
+
+    export BUBBLE_FR_PASS=the-password-you-used-when-running-flex_init.sh
+    export BUBBLE_USER=your-bubble-email@example.com
+    export BUBBLE_PASS=your-bubble-password
+
+On Windows, replace `export` with `set` if you are using the standard Windows `cmd` program.
 
 ## Running the router
 You can sit back and let the router do its work. It will periodically check to make sure that its

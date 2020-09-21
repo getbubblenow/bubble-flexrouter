@@ -67,7 +67,7 @@ fi
 
 FR_PASSWORD=${!BUBBLE_FR_PASS_ENV_VAR}
 if [[ -z "${FR_PASSWORD}" ]] ; then
-  die "bubble-flexrouter password environment variable was not defined or was empty: ${BUBBLE_FR_PASS_ENV_VAR}"
+  read -sp "Flex Router Password: " FR_PASSWORD
 fi
 
 BUBBLE_VPN_IP=$(vpn_ip ${BUBBLE_VPN_SUBNET})
@@ -76,7 +76,7 @@ if [[ -z "${BUBBLE_VPN_IP}" ]] ; then
 fi
 
 if [[ -z "${BUBBLE_USER}" ]] ; then
-  read -p "Bubble Username: " BUBBLE_USER
+  read -p "Bubble Username (Email): " BUBBLE_USER
 fi
 
 if [[ -z "${BUBBLE_USER}" ]] ; then
