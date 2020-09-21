@@ -94,7 +94,7 @@ async fn main() {
             .short("w")
             .long("password-file")
             .value_name("ENV_VAR_NAME")
-            .help("environment variable naming the file that contains bcrypt-hashed password required for admin commands")
+            .help("environment variable naming the file that contains bcrypt-hashed password required for admin commands.  If the value of this variable starts with @ it is the literal bcrypted password, after the @")
             .default_value("BUBBLE_FR_PASS")
             .takes_value(true))
         .arg(Arg::with_name(ARG_PASSWORD_ENV_VAR)
@@ -107,7 +107,7 @@ async fn main() {
             .short("t")
             .long("token-file")
             .value_name("ENV_VAR_NAME")
-            .help("environment variable naming the file that contains the bubble token")
+            .help("environment variable naming the file that contains the bubble token. If the value of this variable starts with @ it is the literal token, after the @")
             .default_value("BUBBLE_FR_TOKEN")
             .takes_value(true))
         .arg(Arg::with_name(ARG_SSH_KEY_FILE)
@@ -160,8 +160,13 @@ async fn main() {
     let password_file_env_var_opt = args.value_of(ARG_PASSWORD_FILE);
     let password_file = read_required_env_var_argument("password-file", password_file_env_var_opt);
 
-    let password_opt = args.value_of(ARG_PASSWORD_ENV_VAR);
-    let password_hash = init_password(password_file.as_str(), password_opt);
+    let password_hash;
+    if password_file.starts_with("@") {
+        password_hash = String::from(&password_file[1..]);
+    } else {
+        let password_opt = args.value_of(ARG_PASSWORD_ENV_VAR);
+        password_hash = init_password(password_file.as_str(), password_opt);
+    }
 
     let admin_port = args.value_of(ARG_ADMIN_PORT).unwrap().parse::<u16>().unwrap();
     let dns1_ip = args.value_of(ARG_DNS1).unwrap();
@@ -183,8 +188,15 @@ async fn main() {
     let ssh_pub_key = Arc::new(read_path_to_string(ssh_pub_key_path));
 
     let token_file_env_var_opt = args.value_of(ARG_TOKEN_FILE);
-    let auth_token_string = read_required_env_var_argument_as_file("token-file", token_file_env_var_opt);
-    let auth_token_val = auth_token_string.trim();
+    let token_file_env_var_value = String::from(token_file_env_var_opt.unwrap());
+    let auth_token_val;
+    let auth_token_string;
+    if token_file_env_var_value.starts_with("@") {
+        auth_token_val = &token_file_env_var_value[1..];
+    } else {
+        auth_token_string = read_required_env_var_argument_as_file("token-file", token_file_env_var_opt);
+        auth_token_val = auth_token_string.trim();
+    }
     if auth_token_val.len() < MIN_TOKEN_CHARS {
         error!("main: auth token in token file is too short, must be at least {} chars", MIN_TOKEN_CHARS);
         exit(2);

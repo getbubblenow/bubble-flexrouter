@@ -167,7 +167,7 @@ dependencies = [
 
 [[package]]
 name = "bubble-flexrouter"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "bcrypt",
  "clap",
