@@ -188,7 +188,7 @@ async fn main() {
     let ssh_pub_key = Arc::new(read_path_to_string(ssh_pub_key_path));
 
     let token_file_env_var_opt = args.value_of(ARG_TOKEN_FILE);
-    let token_file_env_var_value = String::from(token_file_env_var_opt.unwrap());
+    let token_file_env_var_value = read_required_env_var_argument("token-file", token_file_env_var_opt);
     let auth_token_val;
     let auth_token_string;
     if token_file_env_var_value.starts_with("@") {
