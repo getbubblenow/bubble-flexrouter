@@ -179,7 +179,7 @@ async fn main() {
     let ssh_priv_clone = ssh_priv_key.clone();
     let ssh_key_path = Path::new(ssh_priv_clone.as_str());
     if !ssh_key_path.exists() {
-        error!("read_required_env_var_argument_as_path: file does not exist: {}", ssh_key_path.to_str().unwrap());
+        error!("main: ssh_key_path does not exist: {}", ssh_key_path.to_str().unwrap());
         exit(2);
     }
 

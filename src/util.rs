@@ -40,7 +40,7 @@ pub fn read_required_env_var_argument_as_file(arg_name : &str, opt : Option<&str
     let path_string = read_required_env_var_argument(arg_name, opt);
     let file_path = Path::new(path_string.as_str());
     if !file_path.exists() {
-        error!("read_required_env_var_argument_as_path: file does not exist: {}", file_path.to_str().unwrap());
+        error!("read_required_env_var_argument_as_file: file does not exist: {}", file_path.to_str().unwrap());
         exit(2);
     }
     read_path_to_string(file_path)
