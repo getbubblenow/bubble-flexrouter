@@ -37,18 +37,29 @@ If you want to build from source:
 # Installation
 There are a few steps to installation:
  * Generate the flex-router password
- * Create an SSH key pair
  * Create an auth token file
+ * Create an SSH key pair
  * Install system service
 
 ## Generate the bubble-flexrouter password
 During installation, choose a password for the service. It should be random and at least 30 characters long.
 
-Store this password in securely someplace where the Bubble app can read it. Ideally this is *not* on the filesystem,
+Bcrypt the password (use 12 rounds).
+
+Store the plaintext (not bcrypted) password securely someplace where the Bubble app can read it. It will need
+this password to register and unregister the router with the Bubble. Ideally this is *not* on the filesystem,
 but in some internal app storage mechanism, since it will be stored in plaintext.
 
-Bcrypt the password (use 12 rounds) and store the bcrypted value in a file. This file should only be readable by
-the bubble-flexrouter system service.
+Store the bcrypted value securely somewhere someplace where only the bubble-flexrouter service can read it.
+If you store the bcrypted value in a file, ensure that only the bubble-flexrouter service can read the file.
+
+## Create an auth token file
+bubble-flexrouter uses an auth token to secure its connection to a Bubble.
+
+During installation, generate a random token. This token must be at least 50 characters long.
+
+Store the token securely somewhere someplace where only the bubble-flexrouter service can read it.
+If you store the token in a file, ensure that only the bubble-flexrouter service can read the file.
 
 ## Create an SSH key pair
 During installation, generate an RSA key pair:
@@ -59,12 +70,6 @@ In the above, `/some/secure/location` should be a path that is only readable by 
 
 When this step is done, `/some/secure/location` should be the path to the SSH private key and
 `/some/secure/location.pub` should be the path to the SSH public key.
-
-## Create an auth token file
-bubble-flexrouter uses an auth token to secure its connection to a Bubble.
-
-During installation, write a random token to a file. This token must be at least 50 characters long.
-After writing the file, ensure that it is only readable by the bubble-flexrouter service.
 
 ## Install system service
 Install bubble-flexrouter as a system service (Windows Service or Mac OS launch daemon) during Bubble app installation.
@@ -77,8 +82,8 @@ system routing table. This usually means Administrator (on Windows) or root (on 
 The service requires some environment variables to be set:
 
  * `BUBBLE_FR_SSH_KEY` - full path to the *private* SSH key
- * `BUBBLE_FR_PASS` - full path to the bcrypted password file
- * `BUBBLE_FR_TOKEN` - full path to the auth token file
+ * `BUBBLE_FR_PASS` - full path to the bcrypted password file, or the actual bcrypted password prefixed with `@`
+ * `BUBBLE_FR_TOKEN` - full path to the auth token file, or the actual token prefixed with `@`
 
 Run the service with these environment variables set.
 
