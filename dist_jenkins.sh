@@ -33,6 +33,9 @@ fi
 
 if [[ ${IS_MACOS} -eq 1 ]] ; then
   LATEST_INSTALL_SH="$(find ${JENKINS_HOME}/jobs/${FLEX_PROJECT}/builds/${LATEST_BUILD}/archive/dist/releases/bubble-flexrouter/${FLEX_PROJECT}/${LATEST_VERSION} -maxdepth 1 -mindepth 1 -type f -name "install.sh" | head -1)"
+  if [[ -z "${LATEST_INSTALL_SH}" ]] ; then
+    die "No install.sh found"
+  fi
 fi
 
 RELEASE_TOP="${JENKINS_HOME}/public/public/releases/bubble-flexrouter/${FLEX_PROJECT}/"
