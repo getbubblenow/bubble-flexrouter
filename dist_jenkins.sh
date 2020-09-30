@@ -9,6 +9,13 @@ function die () {
   exit 1
 }
 
+IS_MACOS=0
+case "${FLEX_PROJECT}" in
+  *macos*)
+    IS_MACOS=1
+  ;;
+esac
+
 LATEST_BUILD="$(find ${JENKINS_HOME}/jobs/${FLEX_PROJECT}/builds -maxdepth 1 -mindepth 1 -type d | xargs -n 1 basename  | sort -nr | head -1)"
 if [[ -z "${LATEST_BUILD}" ]] ; then
   die "No latest build found"
@@ -24,6 +31,10 @@ if [[ -z "${LATEST_ZIP}" ]] ; then
   die "No latest zip found"
 fi
 
+if [[ ${IS_MACOS} -eq 1 ]] ; then
+  LATEST_INSTALL_SH="$(find ${JENKINS_HOME}/jobs/${FLEX_PROJECT}/builds/${LATEST_BUILD}/archive/dist/releases/bubble-flexrouter/${FLEX_PROJECT}/${LATEST_VERSION} -maxdepth 1 -mindepth 1 -type f -name "install.sh" | head -1)"
+fi
+
 RELEASE_TOP="${JENKINS_HOME}/public/public/releases/bubble-flexrouter/${FLEX_PROJECT}/"
 RELEASE_DIR="${RELEASE_TOP}/${LATEST_VERSION}"
 
@@ -32,6 +43,9 @@ echo "Created release dir: ${RELEASE_DIR}"
 
 cp ${LATEST_ZIP} ${RELEASE_DIR} || die "Error copying ${LATEST_ZIP} -> ${RELEASE_DIR}"
 cp ${LATEST_ZIP}.sha256 ${RELEASE_DIR} || die "Error copying ${LATEST_ZIP}.sha256 -> ${RELEASE_DIR}"
+if [[ ${IS_MACOS} -eq 1 ]] ; then
+  cp ${LATEST_INSTALL_SH} ${RELEASE_DIR} || die "Error copying ${LATEST_INSTALL_SH} -> ${RELEASE_DIR}"
+fi
 echo "Published release: ${RELEASE_DIR}/$(basename ${LATEST_ZIP})"
 
 echo ${LATEST_VERSION} > ${RELEASE_TOP}/latest.txt
