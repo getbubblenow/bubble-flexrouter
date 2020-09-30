@@ -21,13 +21,13 @@ function platform_dist_zip {
 
 function platform_dist_files {
   BUBBLE_SHA="${1}"
-  BUILD_DIR="${2}"
+  FLEX_DIST_DIR="${2}"
   case "$(uname -a | awk '{print $1}')" in
     Darwin*)
       cat ${THISDIR}/macos/install.sh \
       | sed -e "s/@@FR_DIST_VERSION@@/${BUBBLE_VERSION}/g" \
       | sed -e "s/@@FR_DIST_SHA@@/${BUBBLE_SHA}/g" \
-      > ${BUILD_DIR}/install.sh || die "Error creating macos install.sh"
+      > ${FLEX_DIST_DIR}/install.sh || die "Error creating macos install.sh"
       ;;
   esac
 }
@@ -89,7 +89,7 @@ cd ${THISDIR} && \
   cd build && zip -D -X -r ${FLEX_DIST} bubble-flexrouter || die "Error building bubble-flexrouter dist zip file"
 
 cat ${FLEX_DIST} | ${SHA_CMD} | cut -f1 -d' ' | tr -d '\n' > ${FLEX_DIST}.sha256 || die "Error calculating SHA for bubble-flexrouter dist zip file"
-platform_dist_files "$(cat ${FLEX_DIST}.sha256)" ${BUILD_DIR}
+platform_dist_files "$(cat ${FLEX_DIST}.sha256)" ${FLEX_DIST_DIR}
 
 if [[ ${MAKE_SYMLINKS} -eq 1 ]] ; then
   if [[ ${IS_DEV} -eq 0 ]] ; then
