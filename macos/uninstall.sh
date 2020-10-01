@@ -14,51 +14,55 @@ function die {
   exit 1
 }
 
-PLATFORM="$(uname -a | awk '{print $1}')"
-case "${PLATFORM}" in
-  Darwin*)
-    # OK
-    ;;
-  *)
-    die "This is the Mac OS X install.sh script. Cannot run on ${PLATFORM}"
-    ;;
-esac
+function uninstall_flexrouter {
+  PLATFORM="$(uname -a | awk '{print $1}')"
+  case "${PLATFORM}" in
+    Darwin*)
+      # OK
+      ;;
+    *)
+      die "This is the Mac OS X install.sh script. Cannot run on ${PLATFORM}"
+      ;;
+  esac
 
-if [[ $(whoami) != "root" ]] ; then
-  if [[ -z "${0}" || "${0}" == "bash" || "${0}" == "/bin/bash" ]] ; then
-    die "Must be run using sudo"
+  if [[ $(whoami) != "root" ]] ; then
+    if [[ -z "${0}" || "${0}" == "bash" || "${0}" == "/bin/bash" ]] ; then
+      die "Must be run using sudo"
+    fi
+    echo "Started as $(whoami), running sudo"
+    sudo "${0}"
+    exit $?
   fi
-  echo "Started as $(whoami), running sudo"
-  sudo "${0}"
-  exit $?
-fi
 
-echo -n "Unloading service... "
-INSTALLED="$(launchctl list ${LAUNCH_DAEMON_NAME} | wc -l | tr -d ' ')"
-if [[ ${INSTALLED} -eq 0 ]] ; then
-  echo "service not loaded"
-else
-  launchctl unload ${LAUNCH_DAEMON} || die "Error unloading service via: launchctl unload ${LAUNCH_DAEMON}"
-  echo "OK"
-fi
+  echo -n "Unloading service... "
+  INSTALLED="$(launchctl list ${LAUNCH_DAEMON_NAME} | wc -l | tr -d ' ')"
+  if [[ ${INSTALLED} -eq 0 ]] ; then
+    echo "service not loaded"
+  else
+    launchctl unload ${LAUNCH_DAEMON} || die "Error unloading service via: launchctl unload ${LAUNCH_DAEMON}"
+    echo "OK"
+  fi
 
-echo -n "Uninstalling service... "
-if [[ -f "${LAUNCH_DAEMON}" ]] ; then
-  rm -f "${LAUNCH_DAEMON}" || die "Error deleting ${LAUNCH_DAEMON}"
-  echo "OK"
-else
-  echo "plist file not installed: ${LAUNCH_DAEMON}"
-fi
+  echo -n "Uninstalling service... "
+  if [[ -f "${LAUNCH_DAEMON}" ]] ; then
+    rm -f "${LAUNCH_DAEMON}" || die "Error deleting ${LAUNCH_DAEMON}"
+    echo "OK"
+  else
+    echo "plist file not installed: ${LAUNCH_DAEMON}"
+  fi
 
-echo -n "Deleting files... "
-LOG_FILE="/var/log/bubble-flexrouter.log"
-if [[ -d "${INSTALL_DIR}" ]] ; then
-  rm -rf "${INSTALL_DIR}" || die "Error deleting ${INSTALL_DIR}"
-  rm -rf "${LOG_FILE}" || die "Error deleting ${LOG_FILE}"
-  echo "OK"
-else
-  echo "No files found in ${INSTALL_DIR}"
-fi
+  echo -n "Deleting files... "
+  LOG_FILE="/var/log/bubble-flexrouter.log"
+  if [[ -d "${INSTALL_DIR}" ]] ; then
+    rm -rf "${INSTALL_DIR}" || die "Error deleting ${INSTALL_DIR}"
+    rm -rf "${LOG_FILE}" || die "Error deleting ${LOG_FILE}"
+    echo "OK"
+  else
+    echo "No files found in ${INSTALL_DIR}"
+  fi
 
-echo ""
-echo "Uninstall completed successfully"
+  echo ""
+  echo "Uninstall completed successfully"
+}
+
+uninstall_flexrouter "${0}" "${@}"
