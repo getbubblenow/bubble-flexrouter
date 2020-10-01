@@ -142,13 +142,15 @@ To register the flexrouter with the Bubble, send a registration request to the a
 
 This request must include the request header `Content-Type: application/json`
 
-    POST http://127.0.0.1:9833/register
-    {
-      "password": "<password>",
-      "session": "<session-token>",
-      "bubble": "<bubble-hostname>",
-      "ip": "<client-vpn-ip>"
-    }
+```json
+POST http://127.0.0.1:9833/register
+{
+  "password": "<password>",
+  "session": "<session-token>",
+  "bubble": "<bubble-hostname>",
+  "ip": "<client-vpn-ip>"
+}
+```
 
 Where:
 
@@ -173,10 +175,12 @@ When a user logs out of a Bubble node, unregister the flexrouter by sending a re
 
 This request must include the request header `Content-Type: application/json`
 
-    POST http://127.0.0.1:9833/unregister
-    {
-      "password": "<password>"
-    }
+```json
+POST http://127.0.0.1:9833/unregister
+{
+  "password": "<password>"
+}
+```
 
 Where:
 
