@@ -15,7 +15,9 @@ one of your device's real IP addresses.
 # The Easy Way
 
 ## The Mac OS Super Easy Way
-For Mac OS X, there is a super simple way to install the bubble-flexrouter:
+For Mac OS X, there is a super simple way to install the bubble-flexrouter.
+
+Open a Terminal window and paste the command below, then press Enter:
 
     curl -sL https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/install.sh | sudo bash -
 
