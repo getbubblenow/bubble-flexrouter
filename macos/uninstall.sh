@@ -14,6 +14,16 @@ function die {
   exit 1
 }
 
+PLATFORM="$(uname -a | awk '{print $1}')"
+case "${PLATFORM}" in
+  Darwin*)
+    # OK
+    ;;
+  *)
+    die "This is the Mac OS X install.sh script. Cannot run on ${PLATFORM}"
+    ;;
+esac
+
 if [[ $(whoami) != "root" ]] ; then
   echo "Started as $(whoami), running sudo"
   sudo "${0}"
