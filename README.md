@@ -22,6 +22,12 @@ For Mac OS X, there is a super simple way to install the bubble-flexrouter:
 This will download the latest bubble-flexrouter distribution zip file and install it as a LaunchDaemon.
 You'll be asked to set the flexrouter password during installation.
 
+You can use the `uninstall.sh` script to undo everything that install has done.
+Running `uninstall.sh` will unload the LaunchDaemon and remove all files that were installed.
+
+After you have run `install.sh`, continue with [this README](README-release.md) for information on how
+to run `flex_register.sh` to register your flexrouter with a running Bubble.
+
 ## Installing from a distribution zip file
 
 Download the latest bubble-flexrouter release:
