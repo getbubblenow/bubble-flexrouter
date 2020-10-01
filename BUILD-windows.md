@@ -3,7 +3,7 @@
 ## Install MSVC build tools
 If the MSVC build tools are not already installed, install them now.
 
-Go to https://visualstudio.microsoft.com/downloads/
+Go to [https://visualstudio.microsoft.com/downloads/](https://visualstudio.microsoft.com/downloads/)
 
 Download and run the installer. You don't need to install everything. Here's a screenshot showing which components
 need to be installed:
@@ -13,7 +13,7 @@ need to be installed:
 [Screenshot of Windows Build Tools Installer](img/win-build-tools-installer.png)
 
 ## Install Rust
-Go to https://www.rust-lang.org/tools/install
+Go to [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
 
 Download and run the 64-bit version of `rustup-init.exe`
 

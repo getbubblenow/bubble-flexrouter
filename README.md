@@ -19,7 +19,9 @@ For Mac OS X, there is a super simple way to install the bubble-flexrouter.
 
 Open a Terminal window and paste the command below, then press Enter:
 
-    curl -sL https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/install.sh | sudo bash -
+```shell script
+curl -sL https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/install.sh | sudo bash -
+```
 
 This will download the latest bubble-flexrouter distribution zip file and install it as a LaunchDaemon.
 You'll be asked to set the flexrouter password during installation.
@@ -34,7 +36,9 @@ Running `uninstall.sh` will unload the LaunchDaemon and remove all files that we
 
 You can perform the uninstall by running:
 
-    curl -sL https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/uninstall.sh | sudo bash -
+```shell script
+curl -sL https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/uninstall.sh | sudo bash -
+```
 
 Or by downloading the [bubble-flexrouter for Mac OS X](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/bubble-flexrouter.zip)
 distribution, unzipping it, and running the `uninstall.sh` script therein.
@@ -95,7 +99,9 @@ If you store the token in a file, ensure that only the bubble-flexrouter service
 ### Create an SSH key pair
 During installation, generate an RSA key pair:
 
-    ssh-keygen -t rsa -f /some/secure/location
+```shell script
+ssh-keygen -t rsa -f /some/secure/location
+```
 
 In the above, `/some/secure/location` should be a path that is only readable by the bubble-flexrouter system service.
 
@@ -156,10 +162,11 @@ body will contain a plaintext string with an error message.
 
 An example using curl:
 
-    curl -H 'Content-Type: application/json' \
-         -d '{"password":"Uy6dDwNP5msid3P6QEpeVmQMuUiAda","session":"47cc4974-2eca-47d8-8c74-c2cc106b9ba8","bubble":"nexus-dr66b-wn85d-ux27e.bubv.net","ip":"10.19.49.12"}' \
-         http://127.0.0.1:9833/register
-
+```shell script
+curl -H 'Content-Type: application/json' \
+     -d '{"password":"Uy6dDwNP5msid3P6QEpeVmQMuUiAda","session":"47cc4974-2eca-47d8-8c74-c2cc106b9ba8","bubble":"nexus-dr66b-wn85d-ux27e.bubv.net","ip":"10.19.49.12"}' \
+     http://127.0.0.1:9833/register
+```
 
 # Unregistering
 When a user logs out of a Bubble node, unregister the flexrouter by sending a request to the admin port.
@@ -180,10 +187,11 @@ body will contain a plaintext string with an error message.
 
 An example using curl:
 
-    curl -H 'Content-Type: application/json' \
-         -d '{"password":"Uy6dDwNP5msid3P6QEpeVmQMuUiAda"}' \
-         http://127.0.0.1:9833/unregister
-
+```shell script
+curl -H 'Content-Type: application/json' \
+     -d '{"password":"Uy6dDwNP5msid3P6QEpeVmQMuUiAda"}' \
+     http://127.0.0.1:9833/unregister
+```
 
 # Uninstallation
 If the Bubble app is uninstalled from the system, then also:

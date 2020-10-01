@@ -6,7 +6,9 @@ For Windows, see the [Windows build instructions](BUILD-windows.md)
 ## For Ubuntu users
 Run:
 
-    first_time_ubuntu.sh
+```shell script
+first_time_ubuntu.sh
+```
 
 This will install the required `apt` packages and Rust.
 
@@ -17,7 +19,9 @@ Look in `first_time_ubuntu` -- those are the packages that you'll need to instal
 
 Once those are installed, you can install Rust:
 
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```shell script
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 
 ## Build it
 Run `cargo build` to build the program
