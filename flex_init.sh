@@ -119,6 +119,7 @@ if [[ ${WRITE_PASS} -eq 1 ]] ; then
     if [[ -z "${BFR_PASSWORD}" ]] ; then
       die "No password set"
     fi
+    echo ""
   fi
   if [[ $DO_BCRYPT -eq 1 ]] ; then
     echo "$(htpasswd -nbBC 12 USER "${BFR_PASSWORD}" | awk -F ':' '{print $2}')" > ${BFR_PASSWORD_FILE} || die "Error writing password file"

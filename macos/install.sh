@@ -26,6 +26,9 @@ case "${PLATFORM}" in
 esac
 
 if [[ $(whoami) != "root" ]] ; then
+  if [[ -z "${0}" || "${0}" == "bash" || "${0}" == "/bin/bash" ]] ; then
+    die "Must be run using sudo"
+  fi
   echo "Started as $(whoami), running sudo"
   THIS_DIR="$(cd $(dirname ${0}) && pwd)"
   sudo bash "${THIS_DIR}/${0}"
@@ -63,10 +66,10 @@ mkdir -p ${INSTALL_DIR} || die "Error creating directory: ${INSTALL_DIR}"
 cp ${FR_DIST_TMP_DIR}/bubble-flexrouter/* ${INSTALL_DIR} || die "Error copying files to directory: ${INSTALL_DIR}"
 echo "OK"
 
-echo -n "Initializing.... "
+echo "Initializing.... "
 export FLEX_HOME="${INSTALL_DIR}"
 ${INSTALL_DIR}/flex_init.sh || die "Error initializing flexrouter with flex_init.sh"
-echo "OK"
+echo "Initialized"
 
 echo -n "Installing service... "
 cp ${INSTALL_DIR}/${PLIST_FILE} ${LAUNCH_DAEMON} || die "Error copying ${PLIST_FILE} -> ${LAUNCH_DAEMON}"
