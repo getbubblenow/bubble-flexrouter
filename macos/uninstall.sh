@@ -25,6 +25,9 @@ case "${PLATFORM}" in
 esac
 
 if [[ $(whoami) != "root" ]] ; then
+  if [[ -z "${0}" || "${0}" == "bash" || "${0}" == "/bin/bash" ]] ; then
+    die "Must be run using sudo"
+  fi
   echo "Started as $(whoami), running sudo"
   sudo "${0}"
   exit $?
