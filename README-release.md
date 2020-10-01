@@ -35,11 +35,21 @@ We'll walk through each of these steps next.
 ## Initialize the flex router
 This step only needs to be done once. After that, bubble-flexrouter will re-use the initialization settings.
 
-On Mac OS and Linux, start by opening a Terminal window.
+### Mac OS X Installation
+On Mac OS X, it's really easy: just tun the `install.sh` included in the distribution zip file.
+This will install the flex router, initialize it, and install it as a LaunchDaemon.
 
+You can use the `uninstall.sh` script to undo everything that install has done.
+Running `uninstall.sh` will unload the LaunchDaemon and remove all files that were installed.
+
+### Linux Installation
+On Linux, start by opening a Terminal window, then follow the instructions below to run `flex_init.sh`.
+
+### Windows Installation
 If you're using Windows, start by opening a Cygwin bash shell. That's what you'll use to run these commands.
+Follow the instructions below to run `flex_init.sh`.
 
-### If you have htpasswd installed
+#### If you have htpasswd installed
 To initialize your bubble-flexrouter, run the init script:
 
     flex_init.sh
@@ -54,7 +64,7 @@ You can also set this password using an environment variable
 The above command will read the password from the `BUBBLE_FR_PASS` environment variable and will not
 prompt for a password.
 
-### If you don't have htpasswd installed
+#### If you don't have htpasswd installed
 If you don't have `htpasswd` on your system, then you will need to manually bcrypt the password.
 You can do this online at https://bcrypt-generator.com/ -- ensure that "Rounds" is set to 12.
 

@@ -85,7 +85,7 @@ done
 if [[ -z "${FLEX_HOME}" ]] ; then
   FLEX_HOME="${HOME}"
 fi
-BFR_PASSWORD_FILE="${HOMEFLEX_HOME}/.bfr_pass"
+BFR_PASSWORD_FILE="${FLEX_HOME}/.bfr_pass"
 BFR_TOKEN_FILE="${FLEX_HOME}/.bfr_token"
 BFR_SSH_KEY_FILE="${FLEX_HOME}/.ssh/flex"
 

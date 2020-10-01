@@ -6,20 +6,36 @@
     <dict>
         <key>Label</key>
         <string>com.bubble-vpn.flexrouter</string>
+
         <key>ProgramArguments</key>
         <array>
             <string>/Library/BubbleFlexrouter/bubble-flexrouter</string>
         </array>
+
+        <key>EnvironmentVariables</key>
+        <dict>
+            <key>BUBBLE_FR_SSH_KEY</key>
+            <string>/Library/BubbleFlexrouter/.ssh/flex</string>
+            <key>BUBBLE_FR_PASS</key>
+            <string>/Library/BubbleFlexrouter/.bfr_pass</string>
+            <key>BUBBLE_FR_TOKEN</key>
+            <string>/Library/BubbleFlexrouter/.bfr_token</string>
+        </dict>
+
         <key>KeepAlive</key>
         <true/>
+
         <key>RunAtLoad</key>
         <true/>
+
         <key>SockServiceName</key>
         <string>9833</string>
+
         <key>StandardOutPath</key>
         <string>/var/log/bubble-flexrouter.log</string>
         <key>StandardErrorPath</key>
         <string>/var/log/bubble-flexrouter.log</string>
+
         <key>WorkingDirectory</key>
         <string>/Library/BubbleFlexrouter</string>
     </dict>

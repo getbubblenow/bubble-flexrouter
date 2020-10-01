@@ -13,6 +13,17 @@ Note that using flex routing does remove some privacy protection - sites and app
 one of your device's real IP addresses.
 
 # The Easy Way
+
+## The Mac OS Super Easy Way
+For Mac OS X, there is a super simple way to install the bubble-flexrouter:
+
+    curl -sL https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/install.sh | sudo bash -
+
+This will download the latest bubble-flexrouter distribution zip file and install it as a LaunchDaemon.
+You'll be asked to set the flexrouter password during installation.
+
+## Installing from a distribution zip file
+
 Download the latest bubble-flexrouter release:
 
   * [bubble-flexrouter for Windows](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-windows/latest/bubble-flexrouter.zip)
@@ -26,7 +37,10 @@ These scripts make managing a flex router much easier than what is described her
 The instructions below describe the low-level way to initialize and register a flex router
 and are intended for software developers.
 
-# Build bubble-flexrouter
+# The Hard Way
+If you want to customize the installation, follow these instructions.
+
+## Build bubble-flexrouter
 You can skip this step if you have a pre-built binary from one of the above ZIP files.
 
 If you want to build from source:
@@ -34,14 +48,14 @@ If you want to build from source:
  * Follow the [build instructions](BUILD.md) to build the bubble-flexrouter binary
  * or, on Windows, follow the [Windows build instructions](BUILD-windows.md)
 
-# Installation
+## Installation
 There are a few steps to installation:
  * Generate the flex-router password
  * Create an auth token file
  * Create an SSH key pair
  * Install system service
 
-## Generate the bubble-flexrouter password
+### Generate the bubble-flexrouter password
 During installation, choose a password for the service. It should be random and at least 30 characters long.
 
 Bcrypt the password (use 12 rounds).
@@ -53,7 +67,7 @@ but in some internal app storage mechanism, since it will be stored in plaintext
 Store the bcrypted value securely somewhere someplace where only the bubble-flexrouter service can read it.
 If you store the bcrypted value in a file, ensure that only the bubble-flexrouter service can read the file.
 
-## Create an auth token file
+### Create an auth token file
 bubble-flexrouter uses an auth token to secure its connection to a Bubble.
 
 During installation, generate a random token. This token must be at least 50 characters long.
@@ -61,7 +75,7 @@ During installation, generate a random token. This token must be at least 50 cha
 Store the token securely somewhere someplace where only the bubble-flexrouter service can read it.
 If you store the token in a file, ensure that only the bubble-flexrouter service can read the file.
 
-## Create an SSH key pair
+### Create an SSH key pair
 During installation, generate an RSA key pair:
 
     ssh-keygen -t rsa -f /some/secure/location
@@ -71,13 +85,15 @@ In the above, `/some/secure/location` should be a path that is only readable by 
 When this step is done, `/some/secure/location` should be the path to the SSH private key and
 `/some/secure/location.pub` should be the path to the SSH public key.
 
-## Install system service
+### Install system service
 Install bubble-flexrouter as a system service (Windows Service or Mac OS launch daemon) during Bubble app installation.
 
 It should always be running. Set it to run at system startup.
 
 The user that bubble-flexrouter runs as must have sufficient privileges to add and remove IP routes from the
 system routing table. This usually means Administrator (on Windows) or root (on Mac OS).
+
+For Mac OS X, you can use the `com.bubble-vpn.flexrouter.plist` file included in the distribution zip file.
 
 The service requires some environment variables to be set:
 
@@ -87,7 +103,7 @@ The service requires some environment variables to be set:
 
 Run the service with these environment variables set.
 
-## Uncommon configuration
+### Uncommon configuration
 By default bubble-flexrouter will listen on 127.0.0.1 on ports 9823 and 9833.
 
 If these ports are unavailable, you can change them with command line arguments to bubble-flexrouter.
