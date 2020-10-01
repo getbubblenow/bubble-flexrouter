@@ -12,9 +12,10 @@ function die {
 
 function platform_dist_zip {
   BUILD_DIR="${1}"
+  PLIST_FILE="com.bubble-vpn.flexrouter.plist"
   case "$(uname -a | awk '{print $1}')" in
     Darwin*)
-      cp ${THISDIR}/macos/flexrouter.plist ${BUILD_DIR} || die "Error copying macos files to BUILD_DIR: ${BUILD_DIR}"
+      cp ${THISDIR}/macos/${PLIST_FILE} ${BUILD_DIR} || die "Error copying macos files to BUILD_DIR: ${BUILD_DIR}"
       ;;
   esac
 }
