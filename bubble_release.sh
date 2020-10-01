@@ -28,6 +28,7 @@ function platform_dist_files {
       | sed -e "s/@@FR_DIST_VERSION@@/${BUBBLE_VERSION}/g" \
       | sed -e "s/@@FR_DIST_SHA@@/${BUBBLE_SHA}/g" \
       > ${FLEX_DIST_DIR}/install.sh || die "Error creating macos install.sh"
+      cp ${THISDIR}/macos/uninstall.sh ${FLEX_DIST_DIR}/uninstall.sh || die "Error copying macos uninstall.sh"
       ;;
   esac
 }

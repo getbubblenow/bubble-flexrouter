@@ -125,11 +125,21 @@ pub async fn start_admin (admin_reg : Arc<Mutex<Option<AdminRegistration>>>,
         .and(warp::any().map(move || ssh_container_clone.clone()))
         .and_then(handle_unregister));
 
-    let routes = register.or(unregister);
+    let ping = warp::get().and(warp::path!("ping")
+        .and_then(handle_ping));
+
+    let routes = register.or(unregister).or(ping);
 
     let admin_server = warp::serve(routes).run(admin_sock);
     info!("start_admin: Admin listening on {}", admin_sock);
     admin_server.await;
+}
+
+async fn handle_ping() -> Result<impl warp::Reply, warp::Rejection> {
+    Ok(warp::reply::with_status(
+        "bubble-flexrouter is running\n",
+        http::StatusCode::OK,
+    ))
 }
 
 async fn handle_register(registration : AdminRegistration,

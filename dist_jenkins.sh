@@ -36,6 +36,10 @@ if [[ ${IS_MACOS} -eq 1 ]] ; then
   if [[ ! -s "${LATEST_INSTALL_SH}" ]] ; then
     die "No install.sh found"
   fi
+  LATEST_UNINSTALL_SH="${JENKINS_HOME}/jobs/${FLEX_PROJECT}/builds/${LATEST_BUILD}/archive/uninstall.sh"
+  if [[ ! -s "${LATEST_UNINSTALL_SH}" ]] ; then
+    die "No uninstall.sh found"
+  fi
 fi
 
 RELEASE_TOP="${JENKINS_HOME}/public/public/releases/bubble-flexrouter/${FLEX_PROJECT}/"
@@ -48,6 +52,7 @@ cp ${LATEST_ZIP} ${RELEASE_DIR} || die "Error copying ${LATEST_ZIP} -> ${RELEASE
 cp ${LATEST_ZIP}.sha256 ${RELEASE_DIR} || die "Error copying ${LATEST_ZIP}.sha256 -> ${RELEASE_DIR}"
 if [[ ${IS_MACOS} -eq 1 ]] ; then
   cp ${LATEST_INSTALL_SH} ${RELEASE_DIR} || die "Error copying ${LATEST_INSTALL_SH} -> ${RELEASE_DIR}"
+  cp ${LATEST_UNINSTALL_SH} ${RELEASE_DIR} || die "Error copying ${LATEST_UNINSTALL_SH} -> ${RELEASE_DIR}"
 fi
 echo "Published release: ${RELEASE_DIR}/$(basename ${LATEST_ZIP})"
 

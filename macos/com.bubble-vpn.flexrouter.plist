@@ -8,10 +8,11 @@
         <string>com.bubble-vpn.flexrouter</string>
         <key>ProgramArguments</key>
         <array>
-            <string>hello</string>
-            <string>world</string>
+            <string>/Library/BubbleFlexrouter/bubble-flexrouter</string>
         </array>
         <key>KeepAlive</key>
+        <true/>
+        <key>RunAtLoad</key>
         <true/>
         <key>SockServiceName</key>
         <string>9833</string>

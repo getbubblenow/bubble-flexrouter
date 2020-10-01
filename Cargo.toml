@@ -1,7 +1,7 @@
 # Copyright (c) 2020 Bubble, Inc.  All rights reserved. For personal (non-commercial) use, see license: https://getbubblenow.com/bubble-license/
 [package]
 name = "bubble-flexrouter"
-version = "1.1.1"
+version = "1.1.2"
 authors = ["Jonathan Cobb <jonathan@getbubblenow.com>"]
 edition = "2018"
 
