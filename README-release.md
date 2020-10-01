@@ -36,7 +36,7 @@ We'll walk through each of these steps next.
 This step only needs to be done once. After that, bubble-flexrouter will re-use the initialization settings.
 
 ### Mac OS X Installation
-On Mac OS X, it's really easy: just tun the `install.sh` included in the distribution zip file.
+On Mac OS X, it's really easy: just run the `install.sh` included in the distribution zip file.
 This will install the flex router, initialize it, and install it as a LaunchDaemon.
 
 You can use the `uninstall.sh` script to undo everything that install has done.
