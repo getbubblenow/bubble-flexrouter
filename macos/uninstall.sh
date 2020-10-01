@@ -51,8 +51,10 @@ else
 fi
 
 echo -n "Deleting files... "
+LOG_FILE="/var/log/bubble-flexrouter.log"
 if [[ -d "${INSTALL_DIR}" ]] ; then
   rm -rf "${INSTALL_DIR}" || die "Error deleting ${INSTALL_DIR}"
+  rm -rf "${LOG_FILE}" || die "Error deleting ${LOG_FILE}"
   echo "OK"
 else
   echo "No files found in ${INSTALL_DIR}"
