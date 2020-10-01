@@ -15,7 +15,9 @@ function platform_dist_zip {
   PLIST_FILE="com.bubble-vpn.flexrouter.plist"
   case "$(uname -a | awk '{print $1}')" in
     Darwin*)
-      cp ${THISDIR}/macos/${PLIST_FILE} ${BUILD_DIR} || die "Error copying macos files to BUILD_DIR: ${BUILD_DIR}"
+      cp ${THISDIR}/macos/${PLIST_FILE} ${BUILD_DIR} || die "Error copying macos plist to BUILD_DIR: ${BUILD_DIR}"
+      cp ${THISDIR}/macos/install.sh ${BUILD_DIR} || die "Error copying macos install.sh to BUILD_DIR: ${BUILD_DIR}"
+      cp ${THISDIR}/macos/uninstall.sh ${BUILD_DIR} || die "Error copying macos uninstall.sh to BUILD_DIR: ${BUILD_DIR}"
       ;;
   esac
 }
