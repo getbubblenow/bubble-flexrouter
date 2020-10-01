@@ -27,7 +27,8 @@ esac
 
 if [[ $(whoami) != "root" ]] ; then
   echo "Started as $(whoami), running sudo"
-  sudo "${0}"
+  THIS_DIR="$(cd $(dirname ${0}) && pwd)"
+  sudo bash "${THIS_DIR}/${0}"
   exit $?
 fi
 
