@@ -22,18 +22,20 @@ For Mac OS X, there is a super simple way to install the bubble-flexrouter:
 This will download the latest bubble-flexrouter distribution zip file and install it as a LaunchDaemon.
 You'll be asked to set the flexrouter password during installation.
 
-You can use the `uninstall.sh` script to undo everything that install has done.
+After you have run `install.sh`, continue with [this README](README-release.md) for information on how
+to run `flex_register.sh` to register your flexrouter with a running Bubble.
+
+### Mac OS Uninstall
+Use the `uninstall.sh` script to undo everything that install has done.
+
 Running `uninstall.sh` will unload the LaunchDaemon and remove all files that were installed.
 
-You can perform the uninstall by either running:
+You can perform the uninstall by running:
 
     curl -sL https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/uninstall.sh | sudo bash -
 
 Or by downloading the [bubble-flexrouter for Mac OS X](https://jenkins.bubblev.org/public/releases/bubble-flexrouter/bubble-flexrouter-macos/latest/bubble-flexrouter.zip)
 distribution, unzipping it, and running the `uninstall.sh` script therein.
-
-After you have run `install.sh`, continue with [this README](README-release.md) for information on how
-to run `flex_register.sh` to register your flexrouter with a running Bubble.
 
 ## Installing from a distribution zip file
 
